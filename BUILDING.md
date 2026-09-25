@@ -64,3 +64,5 @@ The script loads these defaults; explicit parameters take priority. The `.local`
 - `.github/ISSUE_TEMPLATE/`: English and Russian bug report forms.
 
 The root `.gitignore` allows only the public source and documentation paths. Build output, logs, local configuration, game references, Unity caches and authoring notes stay outside Git. Add new public paths explicitly when needed.
+
+To publish a prepared package through GitHub Actions, see [PUBLISHING.md](PUBLISHING.md).

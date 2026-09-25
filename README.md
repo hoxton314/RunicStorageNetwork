@@ -53,7 +53,9 @@ Requires **BepInExPack Valheim** and **Jötunn**. For multiplayer, install the s
 
 The network works with stationary containers built by players in loaded areas of the world, including containers added by other mods. Remote storage in unloaded areas is not supported. Backpacks, tombstones, ship and cart storage, and personal chests are not connected.
 
-Machines that consume or fire their contents stay out of the network by default, so the obliterator never receives resources. Smelters, kilns, cooking stations, fermenters, beehives, sap collectors, ballistae and catapults are excluded on the same rule, including modded equivalents built on the same components.
+Machines that consume or fire their contents stay out of the network by default. The network does not draw crafting materials from the obliterator. Smelters, kilns, cooking stations, fermenters, beehives, sap collectors, ballistae and catapults are excluded on the same rule, including modded equivalents built on the same components.
+
+Automatic eligibility does not guarantee compatibility with every modded container. Containers with custom inventory, saving or access behavior need separate compatibility testing.
 
 The `Containers` section of the configuration decides which containers take part:
 
@@ -130,7 +132,9 @@ Runic Storage Network объединяет сундуки базы в сеть �
 
 Сеть работает со стационарными хранилищами, построенными игроками, в загруженной области мира, включая хранилища из других модов. Доступ к удалённым выгруженным складам не поддерживается. Рюкзаки, надгробия, корабельные трюмы, повозки и личные сундуки не подключаются.
 
-Устройства, которые расходуют или расстреливают своё содержимое, по умолчанию в сеть не входят, поэтому уничтожитель никогда не получает ресурсы. По тому же правилу исключаются плавильни, углевыжигательные печи, очаги, бродильни, ульи, сокосборники, баллисты и катапульты, в том числе их аналоги из других модов, собранные на тех же компонентах.
+Устройства, которые расходуют или расстреливают своё содержимое, по умолчанию в сеть не входят. Сеть не забирает материалы для крафта из уничтожителя. По тому же правилу исключаются плавильни, углевыжигательные печи, очаги, бродильни, ульи, сокосборники, баллисты и катапульты, в том числе их аналоги из других модов, собранные на тех же компонентах.
+
+Автоматическое подключение не гарантирует совместимость со всеми модовыми хранилищами. Хранилища с нестандартной работой инвентаря, сохранений или прав доступа требуют отдельной проверки совместимости.
 
 Состав сети задаётся в разделе `Containers` конфигурации:
 

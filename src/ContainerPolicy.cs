@@ -13,13 +13,14 @@ namespace RunicStorageNetwork {
  // scan in Topology and the per-container checks in Access only do a dictionary lookup.
  internal static class ContainerPolicy {
   static readonly Dictionary<string,string> verdicts=new Dictionary<string,string>(StringComparer.Ordinal);
-  static ContainerRules rules;static ZNetScene scene;static string signature;
+  static ContainerRules rules;static ZNetScene scene;
   internal static int Supported {get;private set;}
   internal static readonly List<string> Excluded=new List<string>();
 
   internal static void Invalidate(){scene=null;rules=null;}
 
-  static string Signature()=>Text(Plugin.AllowedContainers)+" "+Text(Plugin.DeniedContainers)+" "+Text(Plugin.DeniedComponents);
+  // Plugin's SettingChanged handlers invalidate the cache for local edits and synced settings.
+  // The per-container path only needs to check whether the world changed.
   static string Text(BepInEx.Configuration.ConfigEntry<string> entry)=>entry==null?"":entry.Value??"";
 
   internal static ContainerRules Rules {
@@ -32,7 +33,7 @@ namespace RunicStorageNetwork {
   // Reason why this prefab cannot be network storage, or null when it can.
   internal static string Reason(string prefab){
    if(!ZNetScene.instance)return "unloaded";
-   if(scene!=ZNetScene.instance||signature!=Signature())Catalog();
+   if(scene!=ZNetScene.instance)Catalog();
    if(string.IsNullOrEmpty(prefab))return "unsupported prefab";
    return verdicts.TryGetValue(prefab,out string reason)?reason:"unsupported prefab";
   }
@@ -41,7 +42,7 @@ namespace RunicStorageNetwork {
   internal static void Ensure(){Reason("");}
 
   static void Catalog(){
-   scene=ZNetScene.instance;signature=Signature();rules=null;
+   scene=ZNetScene.instance;rules=null;
    verdicts.Clear();Excluded.Clear();int containers=0;
    foreach(var prefab in scene.m_prefabs){
     if(!prefab||verdicts.ContainsKey(prefab.name))continue;

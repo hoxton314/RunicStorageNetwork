@@ -6,7 +6,7 @@ namespace RunicStorageNetwork.Logic {
  // Configured container filter. Pure decision logic with no Unity or game types, so the
  // isolated tests exercise exactly the rules that the client and the coordinator apply.
  public sealed class ContainerRules {
-  // The obliterator destroys whatever is placed in it; supplying it would consume resources.
+  // Keep contents awaiting destruction out of the crafting resource pool.
   public const string DeniedPrefabDefault="piece_trashcan";
   // Component names, not prefab names, so modded machines built on the same components are
   // covered too. A name that no installed assembly uses simply never matches, so listing a

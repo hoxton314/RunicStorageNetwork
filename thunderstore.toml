@@ -1,0 +1,23 @@
+[config]
+schemaVersion = "0.0.1"
+
+[package]
+namespace = "Rerit"
+name = "RunicStorageNetwork"
+# The workflow supplies the validated release version on the command line.
+versionNumber = "0.0.0"
+description = "Runic Storage Network for Valheim"
+websiteUrl = "https://github.com/rerit33/RunicStorageNetwork"
+containsNsfwContent = false
+
+[package.dependencies]
+
+[build]
+outdir = "./artifacts/tcli"
+
+[publish]
+repository = "https://thunderstore.io"
+communities = ["valheim"]
+
+[publish.categories]
+valheim = ["mods", "crafting", "utility", "building"]

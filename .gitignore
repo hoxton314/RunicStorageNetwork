@@ -7,6 +7,8 @@
 !/CHANGELOG.md
 !/CONTRIBUTING.md
 !/BUILDING.md
+!/PUBLISHING.md
+!/thunderstore.toml
 !/manifest.json
 !/RunicStorageNetwork.csproj
 !/src/
@@ -18,11 +20,16 @@
 !/tools/
 /tools/*
 !/tools/Compile.ps1
+!/tools/ValidateRelease.ps1
+!/tools/TestReleaseValidation.ps1
 !/.github/
 /.github/*
 !/.github/ISSUE_TEMPLATE/
 /.github/ISSUE_TEMPLATE/*
 !/.github/ISSUE_TEMPLATE/*.yml
+!/.github/workflows/
+/.github/workflows/*
+!/.github/workflows/*.yml
 
 **/bin/
 **/obj/

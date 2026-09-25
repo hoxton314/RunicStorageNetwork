@@ -1,0 +1,108 @@
+name: Thunderstore release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to validate only (draft releases are supported)"
+        required: true
+        type: string
+
+permissions:
+  # GitHub hides draft releases from read-only installation tokens.
+  # Needed for the manual pre-publication check; this workflow never writes releases.
+  contents: write
+
+concurrency:
+  group: thunderstore-publish
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: github.repository == 'rerit33/RunicStorageNetwork' && (github.event_name == 'workflow_dispatch' || !github.event.release.prerelease)
+    runs-on: windows-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Check release tag
+        run: |
+          if ($env:RELEASE_TAG -cnotmatch '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$') { throw 'Expected vMAJOR.MINOR.PATCH' }
+          "PACKAGE_VERSION=$($env:RELEASE_TAG.Substring(1))" >> $env:GITHUB_ENV
+
+      - name: Checkout release source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.release.tag_name || inputs.tag }}
+          persist-credentials: false
+
+      - name: Download the prepared ZIP
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          New-Item -ItemType Directory -Path artifacts -Force | Out-Null
+          gh release download "$env:RELEASE_TAG" --repo "$env:GH_REPO" --pattern "RunicStorageNetwork-$env:PACKAGE_VERSION.zip" --dir artifacts
+          if ($LASTEXITCODE -ne 0) { throw 'Release ZIP is missing. Attach it to the draft before publishing.' }
+
+      - name: Validate package and source agreement
+        run: |
+          ./tools/ValidateRelease.ps1 -Package "artifacts/RunicStorageNetwork-$env:PACKAGE_VERSION.zip" -Tag "$env:RELEASE_TAG"
+          ./tools/TestReleaseValidation.ps1 -Package "artifacts/RunicStorageNetwork-$env:PACKAGE_VERSION.zip" -Tag "$env:RELEASE_TAG"
+
+      - name: Set up .NET for Thunderstore CLI
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Install the official Thunderstore CLI
+        run: |
+          dotnet tool install tcli --version 0.2.4 --tool-path .tools
+          if ($LASTEXITCODE -ne 0) { throw 'TCLI installation failed' }
+
+      - name: Check CLI configuration without uploading
+        env:
+          DOTNET_ROLL_FORWARD: Major
+          TCLI_AUTH_TOKEN: validation-only
+        run: |
+          # Config validation precedes the missing-file check; upload cannot start.
+          $missing = Join-Path $env:RUNNER_TEMP ([guid]::NewGuid().ToString('N')+'.zip')
+          $output = & ./.tools/tcli.exe publish --config-path thunderstore.toml --package-version "$env:PACKAGE_VERSION" --file "$missing" 2>&1
+          if ($LASTEXITCODE -eq 0 -or ($output -join "`n") -notmatch 'File selected for publish was not found') {
+            $output | Write-Output
+            throw 'TCLI configuration check did not reach the expected missing-file guard'
+          }
+          Write-Output 'TCLI configuration accepted; no upload attempted.'
+          $global:LASTEXITCODE = 0
+
+      - name: Publish the validated ZIP
+        if: github.event_name == 'release'
+        env:
+          DOTNET_ROLL_FORWARD: Major
+          TCLI_AUTH_TOKEN: ${{ secrets.TCLI_AUTH_TOKEN }}
+        run: |
+          if (!$env:TCLI_AUTH_TOKEN) { throw 'Add repository secret TCLI_AUTH_TOKEN first.' }
+          $url = "https://thunderstore.io/api/experimental/package/Rerit/RunicStorageNetwork/$env:PACKAGE_VERSION/"
+          $existing = Invoke-WebRequest -Uri $url -SkipHttpErrorCheck -TimeoutSec 30
+          if ($existing.StatusCode -eq 200) {
+            Write-Output 'This version is already published; skipping duplicate upload.'
+            return
+          }
+          if ($existing.StatusCode -ne 404) { throw "Could not check existing version: HTTP $($existing.StatusCode)" }
+          & ./.tools/tcli.exe publish --config-path thunderstore.toml --package-version "$env:PACKAGE_VERSION" --file "artifacts/RunicStorageNetwork-$env:PACKAGE_VERSION.zip"
+          if ($LASTEXITCODE -ne 0) { throw 'Thunderstore publication failed. Check the package page before retrying.' }
+
+      - name: Write result
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          if ($env:EVENT_NAME -eq 'workflow_dispatch') {
+            'Package and TCLI configuration validated. This manual run never publishes to Thunderstore.' >> $env:GITHUB_STEP_SUMMARY
+          } else {
+            "Thunderstore version: https://thunderstore.io/c/valheim/p/Rerit/RunicStorageNetwork/$env:PACKAGE_VERSION/" >> $env:GITHUB_STEP_SUMMARY
+          }

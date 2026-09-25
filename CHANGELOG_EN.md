@@ -1,11 +1,12 @@
 # Changelog
 
-## Unreleased
+## 0.5.3
 
-- Chests added by other mods now connect to the network. Any container a player builds can supply crafting, item upgrades and building, instead of only the four vanilla chests.
-- Added a `Containers` configuration section to choose which containers the network uses: `AllowedContainers`, `DeniedContainers` and `DeniedComponents`. Changes apply without restarting the game, and in multiplayer the server decides.
-- The obliterator and other devices that consume or fire their contents stay out of the network by default, including equivalents added by other mods.
-- `rsn_status` now reports how many container types are supported and which are excluded.
+- Relay placement now shows every nearby connection with a path to a core. The nearest connection is highlighted; alternate links are thinner.
+- Added a placement status showing whether a relay will connect. Relays can still be placed without a connection and linked later.
+- Combined overlapping storage and supply circles when their ranges match, with clear range labels during placement.
+- Simplified relay hover text by removing the number of links to the core. Storage counts now include barrels in their wording.
+- Added incompatible mods and integration version requirements to the README, plus links for reporting bugs on GitHub.
 
 ## 0.5.2
 

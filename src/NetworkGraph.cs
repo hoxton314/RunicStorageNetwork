@@ -61,6 +61,10 @@ namespace RunicStorageNetwork.Logic {
    return Near(point).Where(n=>Hops.ContainsKey(n.Id)&&allowed(n)).OrderBy(n=>n.Position.Distance2(point)).ThenBy(n=>n.Id,StringComparer.Ordinal)
     .GroupBy(n=>n.Network,StringComparer.Ordinal).ToDictionary(g=>g.Key,g=>g.First().Id,StringComparer.Ordinal);
   }
+  // Placement needs every direct connection, including alternate links in one network.
+  public NetworkNode[] PlacementConnections(Point point,Func<NetworkNode,bool> allowed)=>Near(point)
+   .Where(n=>Hops.ContainsKey(n.Id)&&allowed(n)).OrderBy(n=>n.Position.Distance2(point))
+   .ThenBy(n=>n.Id,StringComparer.Ordinal).ToArray();
   public string Choose(Point point,Func<NetworkNode,bool> allowed){
    return Nodes.Values.Where(n=>Hops.ContainsKey(n.Id)&&n.Position.Distance2(point)<=n.Supply*n.Supply&&allowed(n))
     .OrderBy(n=>n.Position.Distance2(point)).ThenBy(n=>n.Network,StringComparer.Ordinal).ThenBy(n=>n.Id,StringComparer.Ordinal).Select(n=>n.Network).FirstOrDefault();

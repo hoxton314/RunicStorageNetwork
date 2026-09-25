@@ -11,6 +11,7 @@ using RunicStorageNetwork.Logic;
 namespace RunicStorageNetwork {
  internal static class Patches {
   internal static void Install(Harmony h){
+   Patch(h,typeof(Hud),"SetupPieceInfo",new[]{typeof(Piece)},null,nameof(RelayPlacementInfo));
    Patch(h,typeof(InventoryGui),"DoCrafting",new[]{typeof(Player)},nameof(Craft),null,nameof(CraftIL));
    Patch(h,typeof(InventoryGui),"OnCraftPressed",Type.EmptyTypes,nameof(CraftPressed),nameof(CraftStarted));
    Patch(h,typeof(InventoryGui),"UpdateRecipe",new[]{typeof(Player),typeof(float)},nameof(RecipeSelected),nameof(RecipeUpdated));
@@ -38,6 +39,13 @@ namespace RunicStorageNetwork {
    var target=AccessTools.DeclaredMethod(type,name,args)??throw new MissingMethodException(type.Name+"."+name);
    h.Patch(target,prefix==null?null:new HarmonyMethod(typeof(Patches),prefix){priority=Priority.First},postfix==null?null:new HarmonyMethod(typeof(Patches),postfix),transpiler==null?null:new HarmonyMethod(typeof(Patches),transpiler));
    Plugin.Info("Patch OK: "+type.Name+"."+target);
+  }
+  static void RelayPlacementInfo(Hud __instance,Piece __0){
+   var player=Player.m_localPlayer;
+   if(!__0||!__0.GetComponent<Relay>()||!player||!player.InPlaceMode()||Hud.IsPieceSelectionVisible())return;
+   var ghost=R.Get<GameObject>(player,"m_placementGhost");
+   var preview=ghost&&ghost.activeInHierarchy?ghost.GetComponent<RelayPresentation>():null;
+   if(preview&&preview.PlacementText!=null)__instance.m_pieceDescription.text=preview.PlacementText;
   }
   static bool Craft(InventoryGui __instance,Player player)=>Actions.Craft(__instance,player);
   static void CraftOpened(InventoryGui __instance)=>CraftOverview.Open(__instance,Player.m_localPlayer);

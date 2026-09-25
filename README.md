@@ -73,6 +73,12 @@ Do not enable multiple crafting-from-chests systems at the same time without che
 
 AI tools were used to develop the code, create concept art, and produce the 3D models. Gameplay decisions, selection of results, and in-game testing are handled by the author.
 
+### Incompatible mods and integration limits
+
+Runic Storage Network disables its resource supply when it detects NearbyCrafting, AzuCraftyBoxes, DvergerAutomation, CraftFromContainers or CraftFromChests. Use one storage-supply system at a time.
+
+MultiUserChest and Quick Stack Store Sort Trash Restock are optional. The current integrations accept **MultiUserChest 0.6.2** and **Quick Stack 1.4.15**; other versions disable network supply until their integration is updated. With Quick Stack but without MultiUserChest, `AllowAreaStackingInMultiplayerWithoutMUC` must be disabled. These version checks do not guarantee compatibility with every mod combination.
+
 ---
 
 ## Русский
@@ -143,3 +149,9 @@ Runic Storage Network объединяет сундуки базы в сеть �
 ### Создано с помощью AI
 
 Мод создан с использованием AI-инструментов при разработке кода, концептов и 3D-моделей. Игровые решения, отбор результатов и проверку в игре выполняет автор.
+
+### Несовместимые моды и ограничения интеграций
+
+Runic Storage Network отключает снабжение ресурсами при обнаружении NearbyCrafting, AzuCraftyBoxes, DvergerAutomation, CraftFromContainers или CraftFromChests. Используйте одну систему снабжения из хранилищ.
+
+MultiUserChest и Quick Stack Store Sort Trash Restock необязательны. Текущие интеграции допускают **MultiUserChest 0.6.2** и **Quick Stack 1.4.15**; с другими версиями снабжение отключается до обновления интеграции. При использовании Quick Stack без MultiUserChest параметр `AllowAreaStackingInMultiplayerWithoutMUC` должен быть выключен. Эти проверки версий не гарантируют совместимость с любой комбинацией модов.

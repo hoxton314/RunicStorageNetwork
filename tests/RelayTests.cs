@@ -53,6 +53,12 @@ static class RelayTests {
   Test("source branch loss while entry remains covered",()=>{var c=N("c",0,root:true);var r=N("r",50);var far=N("far",100);var before=G(c,r,far);var after=G(c,far);Check(before.Choose(new Point(),Allow)=="A"&&after.Choose(new Point(),Allow)=="A","entry");Check(before.Covers("A",new Point(110,0,0),Allow)&&!after.Covers("A",new Point(110,0,0),Allow),"source path not revalidated");});
   Test("alternate same network route preserves source coverage",()=>{var g=G(N("c",0,root:true),N("b",40,z:-20),N("far",80));Check(g.Covers("A",new Point(95,0,0),Allow),"valid replacement route refused");});
   Test("abort delivered before delayed prepare",()=>{var owner=new Owner();owner.Finish("late",false);Check(!owner.Prepare("late")&&owner.Items==1&&owner.Held==null,"late prepare leaked reservation");Check(owner.Prepare("next"),"unrelated request blocked");});
+  Test("placement shows all direct links within one network",()=>{var g=G(N("c",0,root:true),N("a",20),N("b",40));Check(g.PlacementConnections(new Point(25,0,0),Allow).Select(n=>n.Id).SequenceEqual(new[]{"a","b","c"}),"alternate links missing or nearest not first");});
+  Test("placement excludes disconnected and unconfirmed nodes",()=>{var pending=N("pending",5);pending.Confirmed=false;var g=G(N("c",0,root:true),N("isolated",100),pending);Check(g.PlacementConnections(new Point(50,0,0),Allow).Select(n=>n.Id).SequenceEqual(new[]{"c"}),"inactive node advertised");});
+  Test("placement respects height and inclusive link boundary",()=>{var g=G(N("c",0,root:true));Check(g.PlacementConnections(new Point(0,50,0),Allow).Length==1&&g.PlacementConnections(new Point(0,50.01,0),Allow).Length==0,"3D range");});
+  Test("placement respects access and keeps separate nearby networks",()=>{var g=G(N("a",-40,"A",true),N("b",40,"B",true));Check(g.PlacementConnections(new Point(),Allow).Length==2&&g.PlacementConnections(new Point(),n=>n.Id!="a").Single().Id=="b","network or access filtering");});
+  Test("placement tie ordering is stable",()=>{var g=G(N("b",10,root:true),N("a",-10));Check(g.PlacementConnections(new Point(),Allow).First().Id=="a","unstable nearest tie");});
+  Test("placement loses links when the only bridge is removed",()=>{var c=N("c",0,root:true);var bridge=N("b",40);var end=N("r",80);Check(G(c,bridge,end).PlacementConnections(new Point(110,0,0),Allow).Length==1&&G(c,end).PlacementConnections(new Point(110,0,0),Allow).Length==0,"broken route still shown");});
   return count;
  }
 }

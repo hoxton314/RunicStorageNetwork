@@ -55,8 +55,7 @@ namespace RunicStorageNetwork {
    string amount=count.Value.HasValue?count.Value.Value.ToString():"…";
    string network=target.Network,state=Topology.State(target);
    if(local){
-    string hops=Topology.Graph.Hops.TryGetValue(target.Id,out var h)?h.ToString():"—";
-    text=Localization.instance.Localize("$rsn_relay_name\n"+state+"\n$rsn_hops "+hops+" • $rsn_containers "+amount+
+    text=Localization.instance.Localize("$rsn_relay_name\n"+state+"\n$rsn_containers "+amount+
      "\n$rsn_link "+Plugin.RelayLink.Value+" $rsn_metres • $rsn_storage "+Plugin.RelayStorage.Value+" $rsn_metres • $rsn_supply "+Plugin.RelaySupply.Value+" $rsn_metres");
    }else text=Localization.instance.Localize("$rsn_name\n"+state+"\n$rsn_supply "+Plugin.SupplyRadius.Value+" $rsn_metres • $rsn_storage "+Plugin.StorageRadius.Value+" $rsn_metres\n$rsn_network_containers "+amount);
    nextText=Time.unscaledTime+.25f;

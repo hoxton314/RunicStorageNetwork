@@ -70,9 +70,12 @@ jobs:
           DOTNET_ROLL_FORWARD: Major
           TCLI_AUTH_TOKEN: validation-only
         run: |
+          # TCLI 0.2.4 does not allow --package-version together with --file.
+          $config = (Get-Content thunderstore.toml -Raw).Replace('versionNumber = "0.0.0"', "versionNumber = `"$env:PACKAGE_VERSION`"")
+          [IO.File]::WriteAllText((Join-Path (Get-Location) 'artifacts/publish.toml'), $config)
           # Config validation precedes the missing-file check; upload cannot start.
           $missing = Join-Path $env:RUNNER_TEMP ([guid]::NewGuid().ToString('N')+'.zip')
-          $output = & ./.tools/tcli.exe publish --config-path thunderstore.toml --package-version "$env:PACKAGE_VERSION" --file "$missing" 2>&1
+          $output = & ./.tools/tcli.exe publish --config-path artifacts/publish.toml --file "$missing" 2>&1
           if ($LASTEXITCODE -eq 0 -or ($output -join "`n") -notmatch 'File selected for publish was not found') {
             $output | Write-Output
             throw 'TCLI configuration check did not reach the expected missing-file guard'
@@ -94,7 +97,7 @@ jobs:
             return
           }
           if ($existing.StatusCode -ne 404) { throw "Could not check existing version: HTTP $($existing.StatusCode)" }
-          & ./.tools/tcli.exe publish --config-path thunderstore.toml --package-version "$env:PACKAGE_VERSION" --file "artifacts/RunicStorageNetwork-$env:PACKAGE_VERSION.zip"
+          & ./.tools/tcli.exe publish --config-path artifacts/publish.toml --file "artifacts/RunicStorageNetwork-$env:PACKAGE_VERSION.zip"
           if ($LASTEXITCODE -ne 0) { throw 'Thunderstore publication failed. Check the package page before retrying.' }
 
       - name: Write result

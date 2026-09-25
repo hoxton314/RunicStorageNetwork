@@ -4,7 +4,7 @@ schemaVersion = "0.0.1"
 [package]
 namespace = "Rerit"
 name = "RunicStorageNetwork"
-# The workflow supplies the validated release version on the command line.
+# The workflow substitutes the validated version in a temporary config copy.
 versionNumber = "0.0.0"
 description = "Runic Storage Network for Valheim"
 websiteUrl = "https://github.com/rerit33/RunicStorageNetwork"

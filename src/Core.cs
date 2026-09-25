@@ -50,7 +50,6 @@ namespace RunicStorageNetwork {
   }
  }
  internal static class Access {
-  internal static readonly HashSet<string> Chests=new HashSet<string>(StringComparer.Ordinal){"piece_chest_wood","piece_chest","piece_chest_blackmetal","piece_chest_barrel"};
   internal static bool Ward(Vector3 point,long player){
    bool denied=false,allowed=false;
    foreach(var area in R.Get<List<PrivateArea>>(typeof(PrivateArea),"m_allAreas")) {
@@ -61,7 +60,7 @@ namespace RunicStorageNetwork {
   }
   internal static bool Container(Container c,long player,Core core,out string reason,bool ownLease=false,string reservation=null,DisplayAccessCache display=null,bool preview=false){
    reason="unloaded";var v=R.View(c);if(!c||!R.Valid(v)||!core||!core.Valid)return false;
-   reason="unsupported prefab";if(!Chests.Contains(R.Id(c.gameObject)))return false;
+   reason=ContainerPolicy.Reason(R.Id(c.gameObject));if(reason!=null)return false;
    var piece=c.GetComponent<Piece>();reason="not player built";if(!piece||!piece.IsPlacedByPlayer())return false;
    reason="moving/private";if(c.m_privacy!=global::Container.PrivacySetting.Public||c.m_wagon||c.m_rootObjectOverride||c.GetComponentInParent<Ship>()||c.GetComponentInParent<Rigidbody>())return false;
    reason="network path/storage coverage unavailable";if(!(display==null?Topology.Covers(core,c.transform.position,player):display.Covers(core,c.transform.position,player)))return false;

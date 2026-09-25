@@ -52,6 +52,7 @@ namespace RunicStorageNetwork {
    Reason("error_owner","The chest owner is unavailable or changed.","Владелец сундука недоступен или изменился.","owner unavailable","ownership changed","ok");
    Reason("error_unloaded","The chest or network node is not loaded.","Сундук или узел сети не загружен.","unloaded","unconfirmed loaded area");
    Reason("error_unsupported","This container type is not supported.","Этот тип хранилища не поддерживается.","unsupported prefab");
+   Reason("error_excluded","This container type is excluded by the storage network settings.","Этот тип хранилища исключён настройками сети хранилищ.","excluded by configuration","excluded container type");
    Reason("error_built","The chest must be built by a player.","Сундук должен быть построен игроком.","not player built");
    Reason("error_private","Moving or private storage cannot be connected.","Подвижное или личное хранилище нельзя подключить.","moving/private");
    Reason("error_access","You do not have access to this chest or network.","Нет доступа к сундуку или сети.","access denied");
@@ -67,6 +68,8 @@ namespace RunicStorageNetwork {
    Add("diag_path","Path to core: {0}","Путь до ядра: {0}");
    Add("diag_pool","Chests to check: {0}","Сундуков для проверки: {0}");
    Add("diag_chest","Chest {0}: {1}","Сундук {0}: {1}");
+   Add("diag_policy","Container types: {0} supported, {1} excluded","Типы хранилищ: {0} поддерживается, {1} исключено");
+   Add("diag_excluded","Excluded container types: {0}","Исключённые типы хранилищ: {0}");
    Add("diag_supply","Supply: {0} | Core: {1}","Снабжение: {0} | Ядро: {1}");
    Add("enabled","Enabled","Включено");Add("none","None","Нет");
   }

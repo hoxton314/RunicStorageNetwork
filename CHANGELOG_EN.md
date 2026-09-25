@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Chests added by other mods now connect to the network. Any container a player builds can supply crafting, item upgrades and building, instead of only the four vanilla chests.
+- Added a `Containers` configuration section to choose which containers the network uses: `AllowedContainers`, `DeniedContainers` and `DeniedComponents`. Changes apply without restarting the game, and in multiplayer the server decides.
+- The obliterator and other devices that consume or fire their contents stay out of the network by default, including equivalents added by other mods.
+- `rsn_status` now reports how many container types are supported and which are excluded.
+
 ## 0.5.2
 
 - Fixed resources disappearing from crafting recipes when another ingredient was missing.

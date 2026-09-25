@@ -135,15 +135,15 @@ namespace RunicStorageNetwork {
   }
   internal bool SourceAllowed(ZDO z,out string reason){
    reason="unloaded";var prefab=Prefab(z);if(!prefab||z.GetOwner()==0)return false;
-   reason="unsupported prefab";if(!Access.Chests.Contains(prefab.name))return false;
+   reason=ContainerPolicy.Reason(prefab.name);if(reason!=null)return false;
    reason="not player built";if(z.GetLong(ZDOVars.s_creator,0)==0)return false;
-   var c=prefab.GetComponent<Container>();reason="moving/private";if(!c||c.m_privacy!=Container.PrivacySetting.Public||c.m_wagon||c.m_rootObjectOverride)return false;
+   // Privacy, wagon and root-override are prefab facts already settled by ContainerPolicy.
    reason="network path/storage coverage unavailable";if(!Graph.Covers(Network,Topology.Position(z.GetPosition()),n=>true)){RepairGraph();if(!Graph.Covers(Network,Topology.Position(z.GetPosition()),n=>true))return false;}
    reason="access denied";if(!Ward(z.GetPosition()))return false;reason="available";return true;
   }
   internal bool OwnerSource(Container c,out string reason,bool ownLease=false){
    reason="unloaded";var v=R.View(c);if(!c||!R.Valid(v)||!v.IsOwner())return false;
-   reason="unsupported prefab";if(!Access.Chests.Contains(R.Id(c.gameObject)))return false;
+   reason=ContainerPolicy.Reason(R.Id(c.gameObject));if(reason!=null)return false;
    reason="not player built";var piece=c.GetComponent<Piece>();if(!piece||!piece.IsPlacedByPlayer())return false;
    reason="unconfirmed loaded area";if(!ZNetScene.instance.IsAreaReady(c.transform.position))return false;
    reason="moving/private";if(c.m_privacy!=Container.PrivacySetting.Public||c.m_wagon||c.m_rootObjectOverride||c.GetComponentInParent<Ship>()||c.GetComponentInParent<Rigidbody>())return false;

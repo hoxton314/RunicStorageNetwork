@@ -74,7 +74,9 @@ namespace RunicStorageNetwork {
     Func<Vector3,(int,int,int)> cell=p=>((int)Math.Floor(p.x/cellSize),(int)Math.Floor(p.y/cellSize),(int)Math.Floor(p.z/cellSize));
     var chests=new Dictionary<(int,int,int),List<Container>>();
     foreach(var piece in R.Get<List<Piece>>(typeof(Piece),"s_allPieces")){
+     // The component check rejects nearly every piece first; only real containers are named.
      var c=piece?piece.GetComponent<Container>():null;if(!c||!R.Valid(R.View(c)))continue;
+     if(!ContainerPolicy.Eligible(R.Id(c.gameObject)))continue;
      var key=cell(c.transform.position);if(!chests.TryGetValue(key,out var bucket))chests[key]=bucket=new List<Container>();bucket.Add(c);
     }
     foreach(var node in Graph.Nodes.Values.Where(n=>Graph.Hops.ContainsKey(n.Id))){
@@ -113,6 +115,8 @@ namespace RunicStorageNetwork {
    if(Graph.Hops.ContainsKey(m.Id))return "$rsn_connected";
    return Graph.Roots.ContainsKey(m.Network)||DestroyedRoots.Contains(m.Network)?"$rsn_disconnected":"$rsn_unknown";
   }
+  // The console keeps few lines; the mod log always receives the untruncated list.
+  static string Excerpt(List<string> names)=>names.Count<=12?string.Join(", ",names.ToArray()):string.Join(", ",names.Take(12).ToArray())+", … (+"+(names.Count-12)+")";
   internal static string Short(string network)=>string.IsNullOrEmpty(network)?"—":network.Substring(Math.Max(0,network.Length-13));
   internal static void Diagnose(Terminal terminal){
    Refresh(true);var p=Player.m_localPlayer;if(!p){terminal.AddString("[RSN] "+RsnLocalization.Text("diag_no_player"));return;}
@@ -124,6 +128,9 @@ namespace RunicStorageNetwork {
    if(Graph.Neighbors.TryGetValue(n.Id,out var neighbors))log("neighbors="+string.Join(",",neighbors),RsnLocalization.Text("diag_neighbors",string.Join(", ",neighbors)));
    var path=new List<string>();string cursor=n.Id;while(Graph.Parent.TryGetValue(cursor,out var parent)){path.Add(parent);cursor=parent;}
    log("path="+string.Join(" -> ",path),RsnLocalization.Text("diag_path",string.Join(" → ",path)));
+   ContainerPolicy.Ensure();
+   log("container policy supported="+ContainerPolicy.Supported+" excluded="+ContainerPolicy.Excluded.Count+"; "+ContainerPolicy.Rules.Summary,RsnLocalization.Text("diag_policy",ContainerPolicy.Supported,ContainerPolicy.Excluded.Count));
+   if(ContainerPolicy.Excluded.Count>0)log("excluded="+string.Join(",",ContainerPolicy.Excluded.ToArray()),RsnLocalization.Text("diag_excluded",Excerpt(ContainerPolicy.Excluded)));
    var core=Root(n.Network);if(!core)return;core.Scan();log("candidate pool="+core.Pool.Count,RsnLocalization.Text("diag_pool",core.Pool.Count));
    foreach(var c in core.Pool){bool allowed=Access.Container(c,p.GetPlayerID(),core,out string reason);string id=R.Key(R.View(c).GetZDO().m_uid);log("ContainerId="+id+" "+(allowed?"available":reason),RsnLocalization.Text("diag_chest",id,RsnLocalization.Reason(allowed?"available":reason)));}
   }

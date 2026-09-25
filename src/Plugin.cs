@@ -12,7 +12,7 @@ using Jotunn.Utils;
 using UnityEngine;
 
 namespace RunicStorageNetwork {
- [BepInPlugin(Guid, "Runic Storage Network", "0.5.3")]
+ [BepInPlugin(Guid, "Runic Storage Network", "0.5.4")]
  [BepInDependency("com.jotunn.jotunn", "2.30.2")]
  [BepInDependency("com.maxsch.valheim.MultiUserChest",BepInDependency.DependencyFlags.SoftDependency)]
  [NetworkCompatibility(CompatibilityLevel.EveryoneMustHaveMod,VersionStrictness.Patch)]
@@ -21,6 +21,7 @@ namespace RunicStorageNetwork {
   internal static ManualLogSource Log;
   internal static ConfigEntry<bool> Supply,DebugLogging;
   internal static ConfigEntry<float> StorageRadius,SupplyRadius,Rescan,RelayLink,RelayStorage,RelaySupply;
+  internal static ConfigEntry<string> AllowedContainers,DeniedContainers,DeniedComponents;
   internal static bool Healthy=true;
   Harmony harmony; AssetBundle bundle; GameObject corePrefab,relayPrefab;
   internal static bool Enabled=>Healthy&&Supply.Value;
@@ -41,9 +42,13 @@ namespace RunicStorageNetwork {
    StorageRadius=Number("StorageRadius",20,1,100);SupplyRadius=Number("SupplyRadius",20,1,100);Rescan=Number("RescanIntervalSeconds",2,0.5f,30);
    RelayLink=Number("RelayLinkRange",50,1,100);RelayStorage=Number("RelayStorageRadius",20,1,100);RelaySupply=Number("RelaySupplyRadius",20,1,100);
    RelayLink.SettingChanged+=SettingsChanged;RelayStorage.SettingChanged+=SettingsChanged;RelaySupply.SettingChanged+=SettingsChanged;
+   AllowedContainers=Names("AllowedContainers","","Prefab names, comma separated. Empty: every player-built container qualifies, including containers added by other mods. When filled, only the listed prefabs are connected.");
+   DeniedContainers=Names("DeniedContainers",Logic.ContainerRules.DeniedPrefabDefault,"Prefab names, comma separated, that are never connected. Exclusion wins over AllowedContainers.");
+   DeniedComponents=Names("DeniedComponents",Logic.ContainerRules.DeniedComponentDefault,"Component names, comma separated. A container whose prefab has any of these is never connected. Keeps machines that consume or fire their contents out of the network, including modded ones.");
+   foreach(var entry in new[]{AllowedContainers,DeniedContainers,DeniedComponents})entry.SettingChanged+=ContainersChanged;
    DebugLogging=Config.Bind("Diagnostics","DebugLogging",false,"Detailed transaction diagnostics without inventory dumps.");
    Supply.SettingChanged+=SettingsChanged;StorageRadius.SettingChanged+=SettingsChanged;SupplyRadius.SettingChanged+=SettingsChanged;Rescan.SettingChanged+=SettingsChanged;
-   Info("0.5.3; Valheim="+global::Version.CurrentVersion+" Unity="+Application.unityVersion+" BepInEx="+typeof(BaseUnityPlugin).Assembly.GetName().Version+" Jotunn="+typeof(PieceManager).Assembly.GetName().Version);
+   Info("0.5.4; Valheim="+global::Version.CurrentVersion+" Unity="+Application.unityVersion+" BepInEx="+typeof(BaseUnityPlugin).Assembly.GetName().Version+" Jotunn="+typeof(PieceManager).Assembly.GetName().Version);
    RsnLocalization.Add();
    try {
     string path=Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location),"Assets","rsn_core_windows");
@@ -74,6 +79,8 @@ namespace RunicStorageNetwork {
   }
   void Start(){try{if(harmony!=null)Integrations.Install(harmony);}catch(Exception e){Disable("Integration API mismatch");Error("integrations",e);}}
   void SettingsChanged(object sender,EventArgs e){Info("Applied configuration: supply="+Enabled+" storage="+StorageRadius.Value+" supplyRadius="+SupplyRadius.Value+" relayLink="+RelayLink.Value+" rescan="+Rescan.Value);Topology.Dirty();}
+  // The coordinator validates every source against these lists, so the server copy decides.
+  void ContainersChanged(object sender,EventArgs e){ContainerPolicy.Invalidate();Stockroom.ClearObservations();foreach(var core in Core.Live)if(core)core.Invalidate();Topology.Dirty();}
   void RegisterRelay(){
    relayPrefab=bundle.LoadAsset<GameObject>("assets/runicstoragegame/rsn_runicrelay.prefab");if(!relayPrefab)throw new InvalidOperationException("Runic relay asset missing");
    relayPrefab.SetActive(false);foreach(var t in relayPrefab.GetComponentsInChildren<Transform>(true))t.gameObject.layer=LayerMask.NameToLayer("piece");
@@ -86,6 +93,7 @@ namespace RunicStorageNetwork {
    if(!PieceManager.Instance.AddPiece(new CustomPiece(relayPrefab,false,cfg)))throw new InvalidOperationException("Jotunn rejected relay");relayPrefab.SetActive(true);Info("RSN_RunicRelay registered with Hammer");
   }
   ConfigEntry<float> Number(string name,float value,float min,float max)=>Config.Bind("Network",name,value,new ConfigDescription(name,new AcceptableValueRange<float>(min,max),new ConfigurationManagerAttributes{IsAdminOnly=true}));
+  ConfigEntry<string> Names(string name,string value,string description)=>Config.Bind("Containers",name,value,new ConfigDescription(description,null,new ConfigurationManagerAttributes{IsAdminOnly=true}));
   void CheckIds(){
    foreach(string id in new[]{"Stone","FineWood","Chain","Iron","SurtlingCore","GreydwarfEye","piece_workbench","Hammer"})if(!PrefabManager.Instance.GetPrefab(id)){Disable("Missing prefab "+id);Log.LogError("[RSN] Required prefab ID unresolved: "+id);}
    try{CoreMaterials.Apply(corePrefab);}catch(Exception e){Error("Native core materials failed; bundle materials retained",e);}
@@ -118,6 +126,6 @@ namespace RunicStorageNetwork {
    return result;
   }
   static string EffectNames(EffectList effects)=>string.Join(",",Array.ConvertAll(effects.m_effectPrefabs,e=>e.m_prefab.name));
-  void OnDestroy(){PrefabManager.OnVanillaPrefabsAvailable-=CheckIds;Supply.SettingChanged-=SettingsChanged;StorageRadius.SettingChanged-=SettingsChanged;SupplyRadius.SettingChanged-=SettingsChanged;Rescan.SettingChanged-=SettingsChanged;RelayLink.SettingChanged-=SettingsChanged;RelayStorage.SettingChanged-=SettingsChanged;RelaySupply.SettingChanged-=SettingsChanged;harmony?.UnpatchSelf();}
+  void OnDestroy(){PrefabManager.OnVanillaPrefabsAvailable-=CheckIds;Supply.SettingChanged-=SettingsChanged;StorageRadius.SettingChanged-=SettingsChanged;SupplyRadius.SettingChanged-=SettingsChanged;Rescan.SettingChanged-=SettingsChanged;RelayLink.SettingChanged-=SettingsChanged;RelayStorage.SettingChanged-=SettingsChanged;RelaySupply.SettingChanged-=SettingsChanged;foreach(var entry in new[]{AllowedContainers,DeniedContainers,DeniedComponents})if(entry!=null)entry.SettingChanged-=ContainersChanged;harmony?.UnpatchSelf();}
  }
 }

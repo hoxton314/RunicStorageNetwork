@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.4
+
+- Added automatic support for eligible stationary storage containers from other mods.
+- Added server-controlled settings to allow or exclude container types without restarting the game.
+- Added diagnostic information about supported and excluded container types.
+
+Thanks to [hoxton314](https://github.com/hoxton314) for contributing support for modded containers, configurable container rules and diagnostics in [PR #1](https://github.com/rerit33/RunicStorageNetwork/pull/1).
+
 ## 0.5.3
 
 - Relay placement now shows every nearby connection with a path to a core. The nearest connection is highlighted; alternate links are thinner.

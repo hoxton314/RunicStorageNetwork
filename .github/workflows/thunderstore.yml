@@ -68,17 +68,18 @@ jobs:
       - name: Check CLI configuration without uploading
         env:
           DOTNET_ROLL_FORWARD: Major
-          TCLI_AUTH_TOKEN: validation-only
+          TCLI_AUTH_TOKEN: ''
         run: |
           # TCLI 0.2.4 does not allow --package-version together with --file.
           $config = (Get-Content thunderstore.toml -Raw).Replace('versionNumber = "0.0.0"', "versionNumber = `"$env:PACKAGE_VERSION`"")
           [IO.File]::WriteAllText((Join-Path (Get-Location) 'artifacts/publish.toml'), $config)
-          # Config validation precedes the missing-file check; upload cannot start.
-          $missing = Join-Path $env:RUNNER_TEMP ([guid]::NewGuid().ToString('N')+'.zip')
-          $output = & ./.tools/tcli.exe publish --config-path artifacts/publish.toml --file "$missing" 2>&1
-          if ($LASTEXITCODE -eq 0 -or ($output -join "`n") -notmatch 'File selected for publish was not found') {
+          # Parse the real ZIP and config with no credentials. TCLI's required-token
+          # validation stops before any upload request. Never expose the real secret here.
+          $output = & ./.tools/tcli.exe publish --config-path artifacts/publish.toml --file "artifacts/RunicStorageNetwork-$env:PACKAGE_VERSION.zip" 2>&1
+          $plain = [regex]::Replace(($output -join "`n"), '\x1B\[[0-?]*[ -/]*[@-~]', '')
+          if ($LASTEXITCODE -eq 0 -or $plain -notmatch 'Auth AuthToken') {
             $output | Write-Output
-            throw 'TCLI configuration check did not reach the expected missing-file guard'
+            throw 'TCLI configuration check did not reach the expected missing-token guard'
           }
           Write-Output 'TCLI configuration accepted; no upload attempted.'
           $global:LASTEXITCODE = 0

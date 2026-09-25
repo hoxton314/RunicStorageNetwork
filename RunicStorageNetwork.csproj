@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project=".local\Build.props" Condition="Exists('.local\Build.props')" />
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <AssemblyName>RunicStorageNetwork</AssemblyName>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <LangVersion>9.0</LangVersion>
+    <FrameworkPathOverride Condition="'$(FrameworkPathOverride)' == '' and '$(EditorData)' != ''">$(EditorData)\MonoBleedingEdge\lib\mono\4.7.2-api</FrameworkPathOverride>
+    <AutomaticallyUseReferenceAssemblyPackages>false</AutomaticallyUseReferenceAssemblyPackages>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="src\*.cs" />
+    <Reference Include="$(ValheimManaged)\Unity*.dll"><Private>false</Private></Reference>
+    <Reference Include="$(ValheimManaged)\assembly_valheim.dll"><Private>false</Private></Reference>
+    <Reference Include="$(ValheimManaged)\assembly_utils.dll"><Private>false</Private></Reference>
+    <Reference Include="$(ValheimManaged)\assembly_guiutils.dll"><Private>false</Private></Reference>
+    <Reference Include="$(ValheimManaged)\Assembly-CSharp.dll"><Private>false</Private></Reference>
+    <Reference Include="$(ValheimManaged)\Splatform.dll"><Private>false</Private></Reference>
+    <Reference Include="$(ValheimManaged)\gui_framework.dll"><Private>false</Private></Reference>
+    <Reference Include="$(ValheimManaged)\SoftReferenceableAssets.dll"><Private>false</Private></Reference>
+    <Reference Include="$(BepInExPath)\core\BepInEx.dll"><Private>false</Private></Reference>
+    <Reference Include="$(BepInExPath)\core\0Harmony.dll"><Private>false</Private></Reference>
+    <Reference Include="$(BepInExPath)\plugins\ValheimModding-Jotunn\Jotunn.dll"><Private>false</Private></Reference>
+  </ItemGroup>
+</Project>

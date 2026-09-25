@@ -1,0 +1,62 @@
+name: Сообщить об ошибке (Русский)
+description: Сообщить о проблеме в Runic Storage Network.
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Опишите проблему и по возможности приложите логи. При сетевых ошибках особенно полезны логи затронутого игрока и хоста/сервера.
+        Проверьте логи на личные данные перед публикацией. [Где найти логи](https://github.com/rerit33/RunicStorageNetwork/blob/main/CONTRIBUTING.md).
+  - type: input
+    id: mod_version
+    attributes:
+      label: Версия Runic Storage Network
+      placeholder: "Например: 0.5.2"
+    validations:
+      required: true
+  - type: input
+    id: game_version
+    attributes:
+      label: Версия Valheim
+    validations:
+      required: true
+  - type: dropdown
+    id: session
+    attributes:
+      label: Режим игры
+      options:
+        - Одиночная игра
+        - Я хост совместной игры
+        - Подключение к другому игроку
+        - Выделенный сервер
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Что произошло?
+      description: Опишите ожидаемый и фактический результат. Укажите рецепт или постройку и примерное время ошибки.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Как повторить ошибку?
+      description: Перечислите действия, частоту ошибки и была ли перед этим телепортация или загрузка мира. Если повторить стабильно не получается, так и напишите.
+    validations:
+      required: true
+  - type: textarea
+    id: setup
+    attributes:
+      label: Другие моды и настройки совместной игры
+      description: Приложите список модов или код профиля. Укажите версии BepInEx/Jötunn и совпадает ли версия мода у всех игроков и сервера. Если известно, укажите количество подключённых сундуков и реле.
+  - type: textarea
+    id: logs
+    attributes:
+      label: Логи и скриншоты
+      description: Перетащите сюда Player.log, BepInEx/LogOutput.log и скриншоты. В совместной игре подпишите, чей каждый лог. Не публикуйте пароли и приватные данные сервера.
+  - type: textarea
+    id: checks
+    attributes:
+      label: Что ещё пробовали?
+      description: Необязательно. Опишите результат после перезапуска, смены рецепта или проверки только с этим модом и зависимостями.

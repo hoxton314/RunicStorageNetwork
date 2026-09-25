@@ -1,0 +1,10 @@
+{
+  "name": "RunicStorageNetwork",
+  "version_number": "0.5.2",
+  "website_url": "https://github.com/rerit33/RunicStorageNetwork",
+  "description": "Connects your base's chests into a network. Craft and upgrade items, build using stored resources, and extend coverage with Runic Relays. Adds two new build pieces. Created with AI assistance. ",
+  "dependencies": [
+    "denikson-BepInExPack_Valheim-5.4.2350",
+    "ValheimModding-Jotunn-2.30.2"
+  ]
+}

@@ -1,0 +1,62 @@
+name: Bug report (English)
+description: Report a problem with Runic Storage Network.
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Describe what happened and attach logs if available. For multiplayer issues, logs from the affected player and host/server are especially useful.
+        Review logs for private information before uploading. See [log locations](https://github.com/rerit33/RunicStorageNetwork/blob/main/CONTRIBUTING.md).
+  - type: input
+    id: mod_version
+    attributes:
+      label: Runic Storage Network version
+      placeholder: "For example: 0.5.2"
+    validations:
+      required: true
+  - type: input
+    id: game_version
+    attributes:
+      label: Valheim version
+    validations:
+      required: true
+  - type: dropdown
+    id: session
+    attributes:
+      label: Game mode
+      options:
+        - Single player
+        - Hosting a multiplayer session
+        - Joining another player's session
+        - Dedicated server
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happened?
+      description: Explain what you expected and what actually happened. Include the affected recipe or building and the approximate time.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: List the steps, how often it happens, and whether teleporting or reloading was involved. Say if you cannot reproduce it reliably.
+    validations:
+      required: true
+  - type: textarea
+    id: setup
+    attributes:
+      label: Other mods and multiplayer setup
+      description: Attach a mod list or profile code. Include BepInEx/Jötunn versions and whether all clients and the server have the same mod version. If known, include the number of connected chests/relays.
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs and screenshots
+      description: Drag Player.log, BepInEx/LogOutput.log and screenshots here. For multiplayer, identify whose log each file is. Do not include passwords or private server details.
+  - type: textarea
+    id: checks
+    attributes:
+      label: Anything else you tried?
+      description: Optional. Mention results after restarting, switching recipes or testing with only this mod and its dependencies.

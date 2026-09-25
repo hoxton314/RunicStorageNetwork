@@ -95,10 +95,9 @@ namespace RunicStorageNetwork {
   }
   internal static bool Ingredient(ItemDrop.ItemData item,bool chest){
    if(item==null||!item.m_dropPrefab||item.m_stack<=0||item.m_worldLevel<Game.m_worldLevel)return false;
-   if(!chest)return true;
-   if(item.m_equipped||item.m_customData.Count>0||item.m_quality!=1||item.m_shared.m_maxQuality!=1)return false;
-   var t=item.m_shared.m_itemType;
-   return t==ItemDrop.ItemData.ItemType.Material||t==ItemDrop.ItemData.ItemType.Consumable||t==ItemDrop.ItemData.ItemType.Ammo;
+   // Recipes select ingredients by prefab and quality, not item category or metadata.
+   // Use the same eligibility for browsing, owner snapshots and actual payment.
+   return !chest||!item.m_equipped;
   }
   internal static List<Stock> Snapshot(Inventory inventory,string source,IEnumerable<Need> needs,bool chest){
    var ids=needs==null?null:new HashSet<string>(needs.Select(n=>n.Item));

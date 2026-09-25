@@ -34,6 +34,8 @@ Both structures are built with the regular hammer near a workbench and require n
 
 Materials in your inventory are used first, followed by any missing materials from connected chests. Recipe requirements and crafting station level requirements still apply.
 
+Interact with a core to give its network an optional name using the standard Valheim text input window. Leave the field empty to remove the name. Connected cores share one network name. Hover over a connected container to see its network; unnamed networks simply show "Connected to network". Unconnected containers receive no additional line.
+
 ### Ranges and recipes
 
 By default, chests connect within **20 m** of a node. Crafting stations and builders are supplied within **20 m**, and neighboring network nodes can connect over distances of up to **50 m**. These ranges can be changed in the mod configuration.
@@ -112,6 +114,8 @@ Runic Storage Network объединяет сундуки базы в сеть �
 3. Пользуйтесь станками и молотом как обычно — необходимые материалы будут взяты из доступного запаса.
 
 Сначала расходуются материалы при себе, затем — недостающее из сундуков. Требования рецептов и уровни станков сохраняются.
+
+Взаимодействуйте с ядром, чтобы задать необязательное название сети через стандартное окно ввода Valheim. Пустое поле удаляет название. Соединённые ядра используют общее название сети. При наведении на подключённое хранилище показывается его сеть; для безымянной сети — просто «Подключено к сети». У неподключённых хранилищ дополнительной строки нет.
 
 ### Радиусы и рецепты
 

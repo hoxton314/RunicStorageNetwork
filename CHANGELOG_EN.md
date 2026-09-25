@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.5
+
+- Networks can now have an optional name, set by interacting with a core. Clear the name to leave the network unnamed.
+- Connected containers now show their network in the hover text, including its name when set.
+- Fixed trophies and other recipe ingredients being ignored when stored in connected containers.
+- Items with upgrade levels or additional mod data can now be used from storage when required by a recipe.
+
 ## 0.5.4
 
 - Added automatic support for eligible stationary storage containers from other mods.

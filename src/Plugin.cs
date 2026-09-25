@@ -12,7 +12,7 @@ using Jotunn.Utils;
 using UnityEngine;
 
 namespace RunicStorageNetwork {
- [BepInPlugin(Guid, "Runic Storage Network", "0.5.4")]
+ [BepInPlugin(Guid, "Runic Storage Network", "0.5.5")]
  [BepInDependency("com.jotunn.jotunn", "2.30.2")]
  [BepInDependency("com.maxsch.valheim.MultiUserChest",BepInDependency.DependencyFlags.SoftDependency)]
  [NetworkCompatibility(CompatibilityLevel.EveryoneMustHaveMod,VersionStrictness.Patch)]
@@ -48,7 +48,7 @@ namespace RunicStorageNetwork {
    foreach(var entry in new[]{AllowedContainers,DeniedContainers,DeniedComponents})entry.SettingChanged+=ContainersChanged;
    DebugLogging=Config.Bind("Diagnostics","DebugLogging",false,"Detailed transaction diagnostics without inventory dumps.");
    Supply.SettingChanged+=SettingsChanged;StorageRadius.SettingChanged+=SettingsChanged;SupplyRadius.SettingChanged+=SettingsChanged;Rescan.SettingChanged+=SettingsChanged;
-   Info("0.5.4; Valheim="+global::Version.CurrentVersion+" Unity="+Application.unityVersion+" BepInEx="+typeof(BaseUnityPlugin).Assembly.GetName().Version+" Jotunn="+typeof(PieceManager).Assembly.GetName().Version);
+   Info("0.5.5; Valheim="+global::Version.CurrentVersion+" Unity="+Application.unityVersion+" BepInEx="+typeof(BaseUnityPlugin).Assembly.GetName().Version+" Jotunn="+typeof(PieceManager).Assembly.GetName().Version);
    RsnLocalization.Add();
    try {
     string path=Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location),"Assets","rsn_core_windows");
@@ -63,6 +63,7 @@ namespace RunicStorageNetwork {
     var wear=prefab.AddComponent<WearNTear>();wear.m_health=1000;wear.m_materialType=WearNTear.MaterialType.Stone;wear.m_noRoofWear=true;wear.m_noSupportWear=false;wear.m_burnable=false;
     prefab.AddComponent<Core>();
     prefab.AddComponent<NetworkMember>();
+    prefab.AddComponent<NetworkName>();
     var cfg=new PieceConfig{Name="$rsn_name",Description="$rsn_description",PieceTable="Hammer",CraftingStation="piece_workbench",Category="Crafting",Usage=new[]{"Storage","Crafting"},Requirements=new[]{new RequirementConfig("Stone",30,0,true),new RequirementConfig("FineWood",20,0,true),new RequirementConfig("Chain",2,0,true),new RequirementConfig("SurtlingCore",4,0,true),new RequirementConfig("GreydwarfEye",10,0,true)}};
     if(!PieceManager.Instance.AddPiece(new CustomPiece(prefab,false,cfg)))throw new InvalidOperationException("Jotunn rejected core");
     // Jotunn keeps the registered template under its inactive prefab container.

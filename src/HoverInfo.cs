@@ -58,6 +58,9 @@ namespace RunicStorageNetwork {
     text=Localization.instance.Localize("$rsn_relay_name\n"+state+"\n$rsn_containers "+amount+
      "\n$rsn_link "+Plugin.RelayLink.Value+" $rsn_metres • $rsn_storage "+Plugin.RelayStorage.Value+" $rsn_metres • $rsn_supply "+Plugin.RelaySupply.Value+" $rsn_metres");
    }else text=Localization.instance.Localize("$rsn_name\n"+state+"\n$rsn_supply "+Plugin.SupplyRadius.Value+" $rsn_metres • $rsn_storage "+Plugin.StorageRadius.Value+" $rsn_metres\n$rsn_network_containers "+amount);
+   string name=NetworkName.For(target);
+   if(name.Length>0)text+="\n"+RsnLocalization.Text("network")+": "+name;
+   if(!local&&Access.Ward(target.transform.position,actor))text+="\n"+Localization.instance.Localize("[<color=yellow><b>$KEY_Use</b></color>] $rsn_network_rename");
    nextText=Time.unscaledTime+.25f;
   }
  }

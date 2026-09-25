@@ -11,6 +11,7 @@ using RunicStorageNetwork.Logic;
 namespace RunicStorageNetwork {
  internal static class Patches {
   internal static void Install(Harmony h){
+   Patch(h,typeof(Container),"GetHoverText",Type.EmptyTypes,null,nameof(ContainerInfo));
    Patch(h,typeof(Hud),"SetupPieceInfo",new[]{typeof(Piece)},null,nameof(RelayPlacementInfo));
    Patch(h,typeof(InventoryGui),"DoCrafting",new[]{typeof(Player)},nameof(Craft),null,nameof(CraftIL));
    Patch(h,typeof(InventoryGui),"OnCraftPressed",Type.EmptyTypes,nameof(CraftPressed),nameof(CraftStarted));
@@ -39,6 +40,9 @@ namespace RunicStorageNetwork {
    var target=AccessTools.DeclaredMethod(type,name,args)??throw new MissingMethodException(type.Name+"."+name);
    h.Patch(target,prefix==null?null:new HarmonyMethod(typeof(Patches),prefix){priority=Priority.First},postfix==null?null:new HarmonyMethod(typeof(Patches),postfix),transpiler==null?null:new HarmonyMethod(typeof(Patches),transpiler));
    Plugin.Info("Patch OK: "+type.Name+"."+target);
+  }
+  static void ContainerInfo(Container __instance,ref string __result){
+   string text=ContainerHover.Text(__instance);if(text.Length>0)__result+="\n"+text;
   }
   static void RelayPlacementInfo(Hud __instance,Piece __0){
    var player=Player.m_localPlayer;

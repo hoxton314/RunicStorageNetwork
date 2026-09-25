@@ -39,6 +39,10 @@ namespace RunicStorageNetwork {
   internal static NetworkGraph Graph=new NetworkGraph(new NetworkNode[0],50);
   static readonly Dictionary<string,NetworkMember> byId=new Dictionary<string,NetworkMember>(StringComparer.Ordinal);
   static readonly Dictionary<string,List<Container>> pools=new Dictionary<string,List<Container>>(StringComparer.Ordinal);
+  static readonly Dictionary<Container,List<string>> containerNetworks=new Dictionary<Container,List<string>>();
+  static readonly Dictionary<string,Core> labelRoots=new Dictionary<string,Core>(StringComparer.Ordinal);
+  internal static IEnumerable<string> ContainerNetworks(Container c)=>containerNetworks.TryGetValue(c,out var networks)?networks:(IEnumerable<string>)Array.Empty<string>();
+  internal static Core LabelRootSnapshot(string network)=>network!=null&&labelRoots.TryGetValue(network,out var root)&&root&&root.Valid?root:null;
   static readonly Dictionary<long,NetworkGraph> actorGraphs=new Dictionary<long,NetworkGraph>();
   sealed class Selection {internal Vector3 Point;internal float Until;internal Core Core;}
   static readonly Dictionary<long,Selection> selections=new Dictionary<long,Selection>();
@@ -54,7 +58,7 @@ namespace RunicStorageNetwork {
    }
    if(stamp==accessRevision)return;accessRevision=stamp;unchecked{DisplayRevision++;}selections.Clear();actorGraphs.Clear();foreach(var core in Core.Live)if(core)core.Invalidate();
   }
-  internal static void Clear(){Members.Clear();DestroyedRoots.Clear();byId.Clear();pools.Clear();selections.Clear();actorGraphs.Clear();Graph=new NetworkGraph(new NetworkNode[0],50);next=0;dirty=true;HoverInfo.Clear();}
+  internal static void Clear(){Members.Clear();DestroyedRoots.Clear();byId.Clear();pools.Clear();containerNetworks.Clear();labelRoots.Clear();selections.Clear();actorGraphs.Clear();Graph=new NetworkGraph(new NetworkNode[0],50);next=0;dirty=true;HoverInfo.Clear();ContainerHover.Clear();}
   internal static NetworkMember Member(string id)=>byId.TryGetValue(id,out var n)&&n&&n.Valid?n:null;
   internal static Core Root(string network){Refresh();return RootSnapshot(network);}
   internal static Core RootSnapshot(string network)=>network!=null&&Graph.Roots.TryGetValue(network,out var id)?Member(id)?.GetComponent<Core>():null;
@@ -68,7 +72,10 @@ namespace RunicStorageNetwork {
     foreach(var member in Members.Where(m=>m&&m.Valid).OrderBy(m=>m.Id,StringComparer.Ordinal))byId[member.Id]=member;
     Graph=NetworkGraph.Automatic(byId.Values.Select(m=>new NetworkNode{Id=m.Id,Network=m.SavedNetwork,Root=m.Root,Position=Position(m.transform.position),
      Confirmed=m.View.GetZDO().GetInt(NetworkMember.SchemaKey,0)==1&&ZNetScene.instance.IsAreaReady(m.transform.position),Storage=m.Root?Plugin.StorageRadius.Value:Plugin.RelayStorage.Value,Supply=m.Root?Plugin.SupplyRadius.Value:Plugin.RelaySupply.Value}),Plugin.RelayLink.Value);
-    pools.Clear();
+    pools.Clear();containerNetworks.Clear();labelRoots.Clear();
+    // Persistent core identities keep the displayed name stable across world reloads.
+    foreach(var root in Graph.Nodes.Values.Where(n=>n.Root&&Graph.Hops.ContainsKey(n.Id)).OrderBy(n=>Member(n.Id).SavedNetwork,StringComparer.Ordinal).ThenBy(n=>n.Id,StringComparer.Ordinal))
+     if(!labelRoots.ContainsKey(root.Network))labelRoots[root.Network]=Member(root.Id).GetComponent<Core>();
     // One pass through loaded pieces, then spatial buckets shared by every node.
     float cellSize=Mathf.Max(Plugin.StorageRadius.Value,Plugin.RelayStorage.Value);
     Func<Vector3,(int,int,int)> cell=p=>((int)Math.Floor(p.x/cellSize),(int)Math.Floor(p.y/cellSize),(int)Math.Floor(p.z/cellSize));
@@ -86,6 +93,10 @@ namespace RunicStorageNetwork {
       foreach(var c in bucket)if(node.Position.Distance2(Position(c.transform.position))<=node.Storage*node.Storage)pool.Add(c);
     }
     foreach(string key in pools.Keys.ToArray())pools[key]=pools[key].GroupBy(c=>R.Key(R.View(c).GetZDO().m_uid),StringComparer.Ordinal).Select(g=>g.First()).OrderBy(c=>R.Key(R.View(c).GetZDO().m_uid),StringComparer.Ordinal).ToList();
+    foreach(var pair in pools)foreach(var c in pair.Value){
+     if(!containerNetworks.TryGetValue(c,out var networks))containerNetworks[c]=networks=new List<string>();
+     networks.Add(pair.Key);
+    }
     foreach(var core in Core.Live)if(core)core.Scan();
     foreach(var member in byId.Values)member.LogState(State(member));
    }finally{refreshing=false;}
@@ -142,6 +153,7 @@ namespace RunicStorageNetwork {
    if(!world||!ZNetScene.instance)return;Topology.CheckAccessRevision();Topology.Refresh();
 
    HoverInfo.Tick();
+   ContainerHover.Tick();
   }
   void OnDestroy(){Topology.Clear();}
  }

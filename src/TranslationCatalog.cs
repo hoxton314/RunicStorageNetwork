@@ -27,6 +27,10 @@ namespace RunicStorageNetwork {
    Add("disconnected","Path to core lost","Путь до ядра потерян");
    Add("unknown","Path not yet confirmed","Путь пока не подтверждён");
    Add("network","Network","Сеть");
+   Add("network_rename","Name network","Назвать сеть");
+   Add("network_name_input","Network name (optional)","Название сети (необязательно)");
+   Add("chest_connected","Connected to network","Подключено к сети");
+   Add("chest_connected_named","Connected to network: {0}","Подключено к сети: {0}");
    Add("hops","Links to core:","Соединений до ядра:");
    Add("containers","Nearby storage:","Хранилищ рядом:");
    Add("network_containers","Network storage:","Хранилищ в сети:");

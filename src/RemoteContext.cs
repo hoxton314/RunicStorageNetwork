@@ -73,8 +73,8 @@ namespace RunicStorageNetwork {
     if(piece.m_craftingStation&&!ZoneSystem.instance.GetGlobalKey(GlobalKeys.NoWorkbench)&&!HaveBuildStation(point,piece.m_craftingStation.m_name))return false;
     req=piece.m_resources;
    }else{
-    var recipe=RecipeIndex.Find(op.Target);
-    reason="recipe unavailable";if(!recipe||op.Quality<1||op.Quality>recipe.m_item.m_itemData.m_shared.m_maxQuality)return false;
+    var recipe=RecipeIndex.Find(op.Target,out reason);if(!recipe)return false;
+    reason="invalid recipe quality";if(op.Quality<1||op.Quality>recipe.m_item.m_itemData.m_shared.m_maxQuality)return false;
     var z=Data(op.Station);var prefab=Prefab(z);var station=prefab?prefab.GetComponent<CraftingStation>():null;
     reason="station unavailable";if(!station||station.m_upgrader||Vector3.Distance(point,z.GetPosition())>=station.m_useDistance)return false;
     var required=recipe.GetRequiredStation(op.Quality);

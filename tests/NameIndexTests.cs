@@ -19,9 +19,9 @@ static class NameIndexTests {
    Assert(index.Count==3&&index.Find("Recipe_ModdedBlade").Tag=="Recipe_ModdedBlade#2","lookup");
    Assert(index.Find("missing")==null&&index.Find("")==null&&index.Find(null)==null,"absent name must not resolve");
   });
-  Test("an ambiguous name resolves to the first entry on every side",()=>{
+  Test("an ambiguous name keeps every candidate and never picks the first",()=>{
    var index=Index("Recipe_Wood","Recipe_Shared","Recipe_Shared","Recipe_Shared");
-   Assert(index.Find("Recipe_Shared").Tag=="Recipe_Shared#1","later entry won");
+   Assert(index.Find("Recipe_Shared")==null&&index.Candidates("Recipe_Shared").Count==3,"ambiguous name picked a winner");
    Assert(index.Ambiguous("Recipe_Shared")&&!index.Ambiguous("Recipe_Wood"),"ambiguity not reported");
    Assert(index.DuplicateCount==1&&index.Duplicates.Single()=="Recipe_Shared","duplicate reported more than once");
    Assert(index.Count==2,"ambiguous name counted twice");

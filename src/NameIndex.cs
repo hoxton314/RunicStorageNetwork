@@ -3,12 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 
 namespace RunicStorageNetwork.Logic {
- // Name to object lookup with the ambiguities reported rather than hidden. Recipes travel
- // between clients and the coordinator as the name of their asset, so a name that two
- // recipes share, or that no recipe carries, makes an operation unresolvable on one side
- // while the acting client resolved it. Pure logic with no Unity or game types.
+ // Preserve every candidate. Callers must disambiguate a shared name using recipe
+ // content, never the order in which peers registered their recipes.
  public sealed class NameIndex<T> where T:class {
-  readonly Dictionary<string,T> byName=new Dictionary<string,T>(StringComparer.Ordinal);
+  readonly Dictionary<string,List<T>> byName=new Dictionary<string,List<T>>(StringComparer.Ordinal);
   readonly List<string> duplicates=new List<string>();
   public int Count=>byName.Count;
   public int Unnamed {get;private set;}
@@ -16,15 +14,16 @@ namespace RunicStorageNetwork.Logic {
   public int DuplicateCount=>duplicates.Count;
   public bool Ambiguous(string name)=>name!=null&&duplicates.Contains(name);
 
-  // First entry wins, matching the FirstOrDefault scan this replaces, so an ambiguous
-  // name resolves the same way on every side instead of depending on the call site.
   public void Add(string name,T value){
    if(value==null)return;
    if(string.IsNullOrEmpty(name)){Unnamed++;return;}
-   if(byName.ContainsKey(name)){if(!duplicates.Contains(name))duplicates.Add(name);return;}
-   byName[name]=value;
+   if(!byName.TryGetValue(name,out var entries))byName[name]=entries=new List<T>();
+   if(entries.Any(e=>ReferenceEquals(e,value)))return;
+   entries.Add(value);
+   if(entries.Count==2)duplicates.Add(name);
   }
-  public T Find(string name)=>!string.IsNullOrEmpty(name)&&byName.TryGetValue(name,out var value)?value:null;
+  public IReadOnlyList<T> Candidates(string name)=>!string.IsNullOrEmpty(name)&&byName.TryGetValue(name,out var values)?values:Array.Empty<T>();
+  public T Find(string name){var values=Candidates(name);return values.Count==1?values[0]:null;}
 
   public string Report {
    get {

@@ -2,15 +2,17 @@
 
 ## Unreleased
 
-- Recipes are now resolved the same way at every step of a network craft. Ingredient selection could previously use a different recipe than the one that was validated when two recipes share an asset name.
-- A recipe that cannot be resolved now cancels the action instead of raising an error.
-- The mod log reports the recipe index when the game loads, including any recipe names that are not unique.
+- Fixed network crafting choosing the wrong recipe when mods give several recipes the same internal name.
+- Network crafting now follows recipes added, enabled or changed during a session.
+- Changed recipes no longer use resource reservations prepared for their previous requirements.
+- Added clearer log messages when a recipe cannot be matched between players.
 - Serving trays can now place food using supplies from connected storage.
 - Building now draws resources from the network with build tools added by other mods, instead of only the vanilla hammer.
 - Added a `Building` configuration section to choose which build tools use the network. Changes apply without restarting the game, and in multiplayer the server decides.
 - Building with enough materials in your inventory no longer depends on network availability.
 
 Thanks to [hoxton314](https://github.com/hoxton314) for contributing support for additional build tools in [PR #2](https://github.com/rerit33/RunicStorageNetwork/pull/2).
+Thanks to [hoxton314](https://github.com/hoxton314) for contributing unified recipe lookup in [PR #3](https://github.com/rerit33/RunicStorageNetwork/pull/3).
 
 ## 0.5.5
 

@@ -20,7 +20,7 @@ namespace RunicStorageNetwork {
    var at=actor?actor.GetCurrentCraftingStation():null;
    if(!actor||!current||!at||at.m_upgrader||!Plugin.Enabled){Clear();return;}
    if(gui==current&&player==actor&&station==at)return;
-   Clear();gui=current;player=actor;station=at;requestRecords=true;
+   Clear();gui=current;player=actor;station=at;requestRecords=true;RecipeIndex.Ensure();
   }
   internal static void Tick(){
    if(!gui)return;

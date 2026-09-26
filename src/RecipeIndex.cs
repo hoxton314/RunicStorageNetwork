@@ -1,39 +1,93 @@
 using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Security.Cryptography;
+using System.Text;
 using UnityEngine;
 using RunicStorageNetwork.Logic;
 
 namespace RunicStorageNetwork {
- // One recipe lookup for every side of an operation. Recipes are identified on the wire by
- // the name of their asset, so the client, the coordinator and the chest owner must resolve
- // that name identically: same enabled filter, same winner when a name is not unique.
- //
- // Built once per item database, which also keeps the per-operation lookups off a linear
- // scan of every recipe the installed mods contribute.
+ // Cache membership, not eligibility or recipe content. ObjectDB has no public
+ // recipe-list revision: compare references/names without rebuilding unchanged buckets.
+ // Only candidates for the requested name are fingerprinted, not the whole database.
  internal static class RecipeIndex {
+  const string Prefix="rsn1:";
   static NameIndex<Recipe> index=new NameIndex<Recipe>();
   static ObjectDB catalogued;
-  internal static void Invalidate(){catalogued=null;}
+  static Recipe[] members=Array.Empty<Recipe>();
+  static string[] names=Array.Empty<string>();
+  static readonly Dictionary<string,float> reported=new Dictionary<string,float>(StringComparer.Ordinal);
+  internal static void Invalidate(){catalogued=null;members=Array.Empty<Recipe>();names=Array.Empty<string>();index=new NameIndex<Recipe>();reported.Clear();}
 
   static bool Ready(){
-   if(!ObjectDB.instance||ObjectDB.instance.m_recipes==null)return false;
-   if(catalogued!=ObjectDB.instance)Catalog();
+   var db=ObjectDB.instance;if(!db||db.m_recipes==null)return false;
+   bool changed=catalogued!=db||members.Length!=db.m_recipes.Count;
+   for(int i=0;!changed&&i<members.Length;i++){
+    var recipe=db.m_recipes[i];
+    changed=!ReferenceEquals(members[i],recipe)||names[i]!=(recipe?recipe.name:null);
+   }
+   if(changed){
+    catalogued=db;members=db.m_recipes.ToArray();names=new string[members.Length];index=new NameIndex<Recipe>();
+    for(int i=0;i<members.Length;i++){
+     var recipe=members[i];names[i]=recipe?recipe.name:null;
+     // Include disabled and unnamed registered recipes. Their eligibility is live.
+     if(recipe)index.Add(NameKey(recipe.name),recipe);
+    }
+   }
    return true;
   }
-  internal static Recipe Find(string name){
-   if(!Ready())return null;
-   var recipe=index.Find(name);
-   if(!recipe)Plugin.Debug("recipe not resolved from the item database: "+(string.IsNullOrEmpty(name)?"<unnamed>":name));
-   return recipe;
-  }
-  // Reported so a crafting refusal can name the cause instead of only its symptom.
-  internal static bool Ambiguous(string name)=>Ready()&&index.Ambiguous(name);
   internal static void Ensure(){Ready();}
-
-  static void Catalog(){
-   catalogued=ObjectDB.instance;index=new NameIndex<Recipe>();
-   foreach(var recipe in catalogued.m_recipes)if(recipe&&recipe.m_enabled)index.Add(recipe.name,recipe);
-   Plugin.Info("Recipe index: "+index.Report);
-   if(index.Unnamed>0||index.DuplicateCount>0)Plugin.Info("Recipes without a unique asset name cannot be requested from the network; the first of each ambiguous name is used.");
+  internal static string Key(Recipe recipe)=>recipe?Prefix+NameKey(recipe.name)+":"+Fingerprint(recipe):"";
+  internal static bool Matches(Recipe recipe,string key)=>recipe&&recipe.m_enabled&&Key(recipe)==key;
+  static bool Parts(string key,out string bucket,out string fingerprint){
+   bucket=fingerprint=null;
+   if(key==null||key.Length!=134||!key.StartsWith(Prefix,StringComparison.Ordinal)||key[69]!=':')return false;
+   bucket=key.Substring(5,64);fingerprint=key.Substring(70,64);return true;
+  }
+  internal static Recipe Find(string key)=>Find(key,out _);
+  internal static Recipe Find(string key,out string reason){
+   Recipe found=null;reason="recipe unavailable";
+   if(!Ready())reason="recipe database unavailable";
+   else if(!Parts(key,out string bucket,out string fingerprint))reason="recipe identity missing or unsupported";
+   else {
+    var candidates=index.Candidates(bucket);
+    reason=candidates.Count==0?"recipe not registered":"recipe changed or disabled";
+    foreach(var recipe in candidates){
+     if(!recipe||!recipe.m_enabled||!recipe.m_item||Fingerprint(recipe)!=fingerprint)continue;
+     if(found){reason="recipe identity ambiguous";Report(key,reason);return null;}
+     found=recipe;
+    }
+    if(found){reason="ok";return found;}
+   }
+   Report(key,reason);return null;
+  }
+  internal static void Report(string key,string reason){
+   string id=(key??"")+"/"+reason;float now=Time.unscaledTime;
+   if(reported.TryGetValue(id,out float at)&&now-at<30)return;
+   if(reported.Count>=128)reported.Clear();reported[id]=now;
+   string label=key??"<empty>";
+   if(Parts(key,out string bucket,out _)&&index.Candidates(bucket).Count>0&&index.Candidates(bucket)[0])label=index.Candidates(bucket)[0].name+" ["+key+"]";
+   Plugin.Info("Recipe lookup refused: "+reason+"; target="+label+". Check that peers use matching mod versions and recipe settings.");
+  }
+  static string NameKey(string name)=>Hash(Encoding.UTF8.GetBytes(name??""));
+  static string Hash(byte[] bytes){using(var sha=SHA256.Create())return BitConverter.ToString(sha.ComputeHash(bytes)).Replace("-","").ToLowerInvariant();}
+  static void Station(BinaryWriter writer,CraftingStation station){writer.Write(station?station.name:"");writer.Write(station?station.m_name:"");}
+  static string Fingerprint(Recipe recipe){
+   // BinaryWriter length-prefixes strings and writes numbers independently of locale.
+   // Resource order matters for recipes accepting any one of several ingredients.
+   using(var stream=new MemoryStream())using(var writer=new BinaryWriter(stream,Encoding.UTF8,true)){
+    writer.Write(recipe.GetType().FullName);writer.Write(recipe.name??"");writer.Write(recipe.m_item?recipe.m_item.name:"");
+    writer.Write(recipe.m_amount);writer.Write(recipe.m_qualityResultAmountMultiplier);writer.Write(recipe.m_noCraftOnlyUpgrade);
+    Station(writer,recipe.m_craftingStation);Station(writer,recipe.m_repairStation);
+    writer.Write(recipe.m_minStationLevel);writer.Write(recipe.m_requireOnlyOneIngredient);
+    var requirements=recipe.m_resources;writer.Write(requirements?.Length??-1);
+    if(requirements!=null)foreach(var req in requirements){
+     writer.Write(req!=null);if(req==null)continue;
+     writer.Write(req.m_resItem?req.m_resItem.name:"");writer.Write(req.m_amount);writer.Write(req.m_amountPerLevel);
+     writer.Write(req.m_extraAmountOnlyOneIngredient);writer.Write(req.m_upgraderResource);
+    }
+    writer.Flush();return Hash(stream.ToArray());
+   }
   }
  }
 }

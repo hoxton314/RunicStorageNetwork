@@ -47,7 +47,7 @@ namespace RunicStorageNetwork {
    Add("error_unknown","Unable to complete the operation. See the mod log for details.","Не удалось завершить операцию. Подробности — в журнале мода.");
    Reason("error_supply","Network supply is unavailable.","Снабжение из сети недоступно.","supply unavailable");
    Reason("error_actor","The player is unavailable or their session changed.","Игрок недоступен или его сеанс изменился.","actor unavailable","actor data unavailable","actor session mismatch","actor identity mismatch","actor dead","sender does not own character","player context changed");
-   Reason("error_piece","This build piece is unavailable.","Эта постройка недоступна.","invalid hammer piece");
+   Reason("error_piece","This build piece is unavailable.","Эта постройка недоступна.","invalid hammer piece","invalid build piece","excluded build tool","excluded build piece");
    Reason("error_free","Resource requirements changed because free crafting or building is enabled.","Требования к ресурсам изменились: включён бесплатный крафт или строительство.","free building","free crafting");
    Reason("error_station","The required crafting station is unavailable, out of range or below the required level.","Нужный станок недоступен, слишком далеко или не достиг требуемого уровня.","missing build station","station unavailable");
    Reason("error_recipe","The selected recipe or item upgrade is unavailable.","Выбранный рецепт или улучшение предмета недоступны.","recipe unavailable","recipe selection changed","upgrade item changed");
@@ -68,7 +68,7 @@ namespace RunicStorageNetwork {
    Reason("error_access","You do not have access to this chest or network.","Нет доступа к сундуку или сети.","access denied");
    Reason("error_inventory","The chest inventory is unavailable.","Содержимое сундука недоступно.","inventory unavailable");
    Reason("error_busy","The chest is in use or its resources are reserved.","Сундук занят или его ресурсы зарезервированы.","busy/reserved");
-   Reason("error_cancelled","The selected action changed or was cancelled.","Выбранное действие изменилось или было отменено.","no pending action","hammer context changed","placement moved/cancelled","craft cancelled/changed","action not completed");
+   Reason("error_cancelled","The selected action changed or was cancelled.","Выбранное действие изменилось или было отменено.","no pending action","hammer context changed","build tool context changed","placement moved/cancelled","craft cancelled/changed","action not completed");
    Reason("available","Available","Доступен","available");
    Add("diag_help","Show nearby storage network status and write diagnostics to the mod log.","Показать состояние ближайшей сети хранилищ и записать диагностику в журнал мода.");
    Add("diag_no_player","No local player.","Локальный игрок отсутствует.");

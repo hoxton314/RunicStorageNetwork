@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- Serving trays can now place food using supplies from connected storage.
+- Building now draws resources from the network with build tools added by other mods, instead of only the vanilla hammer.
+- Added a `Building` configuration section to choose which build tools use the network. Changes apply without restarting the game, and in multiplayer the server decides.
+- Building with enough materials in your inventory no longer depends on network availability.
+
+Thanks to [hoxton314](https://github.com/hoxton314) for contributing support for additional build tools in [PR #2](https://github.com/rerit33/RunicStorageNetwork/pull/2).
+
 ## 0.5.5
 
 - Networks can now have an optional name, set by interacting with a core. Clear the name to leave the network unnamed.

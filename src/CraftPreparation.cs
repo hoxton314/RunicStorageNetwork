@@ -17,7 +17,7 @@ namespace RunicStorageNetwork {
   static readonly Dictionary<string,Release> retiring=new Dictionary<string,Release>();
   internal static void Clear(){desired=offer=lostClaim=null;CraftOverview.Clear();CraftInspection.Clear();window=null;retiring.Clear();nextProbe=lastSend=0;failureSince=-1;failure=null;}
   static bool Free(Player p)=>p.NoCostCheat()||ZoneSystem.instance.GetGlobalKey(GlobalKeys.NoCraftCost);
-  static bool Same(Actions.Pending a,Actions.Pending b)=>a!=null&&b!=null&&a.Player==b.Player&&a.Gui==b.Gui&&a.Recipe==b.Recipe&&a.Upgrade==b.Upgrade&&a.UpgradeQuality==b.UpgradeQuality&&a.Op.Station==b.Op.Station&&a.Op.Quality==b.Op.Quality&&a.Op.Multiplier==b.Op.Multiplier&&a.Variant==b.Variant;
+  static bool Same(Actions.Pending a,Actions.Pending b)=>a!=null&&b!=null&&a.Player==b.Player&&a.Gui==b.Gui&&a.Recipe==b.Recipe&&a.Op.Target==b.Op.Target&&a.Upgrade==b.Upgrade&&a.UpgradeQuality==b.UpgradeQuality&&a.Op.Station==b.Op.Station&&a.Op.Quality==b.Op.Quality&&a.Op.Multiplier==b.Op.Multiplier&&a.Variant==b.Variant;
   internal static void Selection(InventoryGui gui,Player player){
    if(Actions.Active!=null)return;
    CraftOverview.Open(gui,player);
@@ -33,7 +33,7 @@ namespace RunicStorageNetwork {
    if(claimed!=null&&claimed.Recipe==recipe&&claimed.Upgrade==upgrade&&claimed.Op.Station==R.View(station)?.GetZDO()?.m_uid)return;
    bool multi=upgrade==null&&(ZInput.GetButton("AltPlace")||ZInput.GetButton("JoyLStick")||R.Get<bool>(gui,"m_touchMultiCrafting"));
    var selection=new Actions.Pending{Player=player,Gui=gui,Recipe=recipe,Upgrade=upgrade,UpgradeQuality=upgrade?.m_quality??0,Variant=R.Get<int>(gui,"m_selectedVariant"),Multi=multi,
-    Op=new Operation{Target=recipe.name,Quality=upgrade==null?1:upgrade.m_quality+1,Multiplier=multi?gui.m_multiCraftAmount:1,Station=R.View(station)?.GetZDO()?.m_uid??ZDOID.None}};
+    Op=new Operation{Target=RecipeIndex.Key(recipe),Quality=upgrade==null?1:upgrade.m_quality+1,Multiplier=multi?gui.m_multiCraftAmount:1,Station=R.View(station)?.GetZDO()?.m_uid??ZDOID.None}};
    if(Same(desired,selection))return;
    Cancel();desired=selection;nextProbe=Time.unscaledTime;failureSince=-1;
   }
@@ -52,7 +52,7 @@ namespace RunicStorageNetwork {
    var needs=p.Plan.Where(d=>d.Source=="player").Select(d=>new Need(d.Item,d.Amount,d.Quality));
    return Planner.Plan(needs,stock)!=null;
   }
-  static bool Ready()=>offer!=null&&window!=null&&window.Ready(Time.unscaledTime)&&Same(desired,offer)&&ContextValid(offer)&&PersonalShare(offer);
+  static bool Ready()=>offer!=null&&window!=null&&window.Ready(Time.unscaledTime)&&Same(desired,offer)&&RecipeIndex.Matches(offer.Recipe,offer.Op.Target)&&ContextValid(offer)&&PersonalShare(offer);
   internal static List<Stock> Stock(Player p,IEnumerable<Need> needs,Recipe recipe=null,int quality=0,int multiplier=0)=>CraftOverview.Stock(p,needs);
   internal static List<Stock> IngredientStock(Player p,Recipe recipe,int quality,int amount,List<Need> needs){
    // Vanilla's alternate-ingredient choice controls the actual debit and output
@@ -100,7 +100,7 @@ namespace RunicStorageNetwork {
    if(Personal(desired.Player,desired.Recipe,desired.Op.Quality,desired.Op.Multiplier)){failureSince=-1;return;}
    try{
     var core=contextCore;if(!core)return;
-    var op=Actions.Create(desired.Player,core,false,desired.Recipe.name,desired.Op.Quality,desired.Op.Multiplier);op.Quote=true;
+    var op=Actions.Create(desired.Player,core,false,desired.Op.Target,desired.Op.Quality,desired.Op.Multiplier);op.Quote=true;
     if(!op.Validate(out _,out _,out string why,false)){Problem(why);return;}
     var stock=CraftOverview.Stock(desired.Player,op.Needs);
     var plan=op.SelectNeeds(stock)?Planner.Plan(op.Needs,stock,true):null;
@@ -113,7 +113,7 @@ namespace RunicStorageNetwork {
   internal static void Progress(string id,bool inQueue){if(offer?.Op.Id==id)queued=inQueue;}
   internal static void Offered(string id,List<Debit> plan,float remaining){
    if(offer?.Op.Id!=id||window==null||window.Claimed||window.Confirmed)return;
-   if(!ContextValid(offer)||!Same(desired,offer)||remaining<=.5f){Retire();return;}
+   if(!ContextValid(offer)||!Same(desired,offer)||!RecipeIndex.Matches(offer.Recipe,offer.Op.Target)||remaining<=.5f){Retire();return;}
    var needs=Stockroom.Requirements(offer.Recipe.m_resources,offer.Op.Quality,offer.Op.Multiplier);
    bool valid=!float.IsNaN(remaining)&&!float.IsInfinity(remaining)&&plan.Count>0&&plan.All(d=>d.Amount>0&&d.Quality>=1&&(d.Source=="player"||offer.Op.Sources.Contains(d.Source))&&needs.Any(n=>n.Item==d.Item))&&Satisfies(offer.Recipe,needs,plan.Select(d=>new Stock(d.Source,d.Item,d.Quality,d.Amount)).ToList());
    offer.Plan=plan;
@@ -130,7 +130,8 @@ namespace RunicStorageNetwork {
    offer=null;window=null;nextProbe=Time.unscaledTime+1;Topology.Dirty();Problem(reason);
   }
   static void Problem(string reason){
-   Plugin.Debug("preflight: "+reason);
+   Plugin.Debug("preflight: "+reason+" recipe="+(desired?.Recipe?.name??"none")+" target="+(desired?.Op.Target??"none"));
+   if(reason.StartsWith("recipe ",StringComparison.Ordinal))RecipeIndex.Report(desired?.Op.Target,reason);
    if(reason=="offer expired"||reason=="offer cancelled"||reason.Contains("insufficient")||reason.Contains("busy/reserved")||reason=="queue timeout"||reason=="station unavailable"||reason=="recipe unavailable"||reason.Contains("access denied")){failureSince=-1;return;}
    failure=reason;if(failureSince<0)failureSince=Time.unscaledTime;
    if(Time.unscaledTime-failureSince>=8)Plugin.Critical("preflight-"+desired?.Op.Target,"Cannot confirm selected recipe after background recovery: "+failure);

@@ -13,14 +13,16 @@ namespace RunicStorageNetwork {
   static Recipe recipe;static ItemDrop.ItemData upgrade;
   static readonly Dictionary<string,Source> sources=new Dictionary<string,Source>();
   static float nextRefresh;
+  static string rejectedTarget;static float retryAt;
   internal static bool Ready {get;private set;}
-  internal static void Clear(){operation=null;recipe=null;upgrade=null;sources.Clear();Ready=false;nextRefresh=0;}
+  internal static void Clear(){operation=null;recipe=null;upgrade=null;sources.Clear();Ready=false;nextRefresh=0;rejectedTarget=null;retryAt=0;}
   internal static void Ensure(Actions.Pending selected,Core core){
-   bool same=operation!=null&&recipe==selected.Recipe&&upgrade==selected.Upgrade&&operation.Core==core.Id&&operation.Station==selected.Op.Station&&operation.Quality==selected.Op.Quality&&operation.Multiplier==selected.Op.Multiplier;
+   if(rejectedTarget==selected.Op.Target&&Time.unscaledTime<retryAt)return;
+   bool same=operation!=null&&operation.Target==selected.Op.Target&&recipe==selected.Recipe&&upgrade==selected.Upgrade&&operation.Core==core.Id&&operation.Station==selected.Op.Station&&operation.Quality==selected.Op.Quality&&operation.Multiplier==selected.Op.Multiplier;
    if(same&&(!Ready||Time.unscaledTime<nextRefresh))return;
    Clear();recipe=selected.Recipe;upgrade=selected.Upgrade;
-   var op=Actions.Create(selected.Player,core,false,recipe.name,selected.Op.Quality,selected.Op.Multiplier);
-   if(!op.ReadRequirements(out _))return;
+   var op=Actions.Create(selected.Player,core,false,selected.Op.Target,selected.Op.Quality,selected.Op.Multiplier);
+   if(!op.ReadRequirements(out _)){rejectedTarget=selected.Op.Target;retryAt=Time.unscaledTime+1;return;}
    var proposal=new Actions.Pending{Op=op,Player=selected.Player};
    if(!Actions.Propose(proposal,new List<Debit>()))return;
    operation=op;

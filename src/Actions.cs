@@ -16,7 +16,7 @@ namespace RunicStorageNetwork {
   internal static Pending Waiting,Active;
   static readonly OutcomeReceipts Outcomes=new OutcomeReceipts();
   internal static bool Locked(Inventory inv)=>Waiting!=null&&Waiting.Player&&Waiting.Player.GetInventory()==inv;
-  internal static void Clear(){Waiting=null;Active=null;Outcomes.Clear();Stockroom.ClearObservations();CraftPreparation.Clear();Plugin.ClearCritical();}
+  internal static void Clear(){Waiting=null;Active=null;Outcomes.Clear();Stockroom.ClearObservations();CraftPreparation.Clear();RecipeIndex.Invalidate();Plugin.ClearCritical();}
   // The serving tray, hoe and cultivator also use TryPlacePiece/HaveRequirements.
   // BuildToolPolicy decides which tables take part; the equipped tool must own the table
   // it is placing from, so a tool cannot borrow another tool's pieces.
@@ -123,6 +123,7 @@ namespace RunicStorageNetwork {
    if(p.Op.Build){
     reason="build tool context changed";if(!BuildPiece(p.Player,p.Piece)||!p.Player.InPlaceMode()||p.Player.GetSelectedPiece()!=p.Piece||(ItemDrop.ItemData)R.Call(p.Player,"GetRightItem",Type.EmptyTypes)!=p.Tool)return false;
    }else{
+    reason="recipe changed or disabled";if(!RecipeIndex.Matches(p.Recipe,p.Op.Target))return false;
     reason="craft cancelled/changed";if(!p.Gui||!InventoryGui.IsVisible()||p.Player.GetCurrentCraftingStation()?.GetComponent<ZNetView>().GetZDO()?.m_uid!=p.Op.Station||R.Get<Recipe>(p.Gui,"m_craftRecipe")!=p.Recipe||R.Get<ItemDrop.ItemData>(p.Gui,"m_craftUpgradeItem")!=p.Upgrade)return false;
     var selection=R.Get<object>(p.Gui,"m_selectedRecipe");if((Recipe)selection.GetType().GetProperty("Recipe").GetValue(selection,null)!=p.Recipe)return false;
     if(p.Upgrade!=null&&(!p.Player.GetInventory().ContainsItem(p.Upgrade)||p.Upgrade.m_quality!=p.UpgradeQuality))return false;

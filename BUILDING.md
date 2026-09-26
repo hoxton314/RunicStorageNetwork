@@ -41,7 +41,7 @@ The same command also runs `BuildToolRuntimeTests.exe`. It compiles the producti
 
 It also runs `RecipeRuntimeTests.exe` against the production recipe index and transaction requirement-selection methods. This covers live recipe changes, duplicate names, different registration orders across peers, stale operations and rate-limited diagnostics. These tests use stand-ins; they do not establish compatibility with a mod's custom crafting callbacks.
 
-Recipe requests now carry a versioned content key in the existing target field. All participating clients and the server need this implementation for network crafting; older name-only requests are rejected. Use matching builds when testing this unreleased change.
+Recipe requests now carry a versioned content key in the existing target field. All participating clients and the server need this implementation for network crafting; older name-only requests are rejected. Use matching builds on all peers.
 
 ## Save local paths
 

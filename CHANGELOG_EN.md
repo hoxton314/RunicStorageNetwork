@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.5.6
 
 - Fixed network crafting choosing the wrong recipe when mods give several recipes the same internal name.
 - Network crafting now follows recipes added, enabled or changed during a session.

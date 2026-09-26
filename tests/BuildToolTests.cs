@@ -14,14 +14,14 @@ static class BuildToolTests {
  internal static int Run(){
   Test("modded build tools qualify without configuration",()=>{
    var rules=Defaults();
-   foreach(string tool in new[]{"Hammer","OdinsHammer","ModdedBuildHammer"})
+   foreach(string tool in new[]{"Hammer","OdinsHammer","ModdedBuildHammer","Hoe","Cultivator"})
     Assert(rules.Verdict(new[]{tool},Building)==null,"rejected "+tool);
    Assert(!rules.Restricted,"default configuration must not restrict");
   });
-  Test("terrain tools stay out by name and by component",()=>{
+  Test("terrain actions stay out without excluding the whole tool",()=>{
    var rules=Defaults();
-   Assert(rules.Verdict(new[]{"Hoe"},Building)==BuildToolRules.ExcludedToolReason,"hoe accepted");
-   Assert(rules.Verdict(new[]{"Cultivator"},Building)==BuildToolRules.ExcludedToolReason,"cultivator accepted");
+   Assert(rules.Verdict(new[]{"Hoe"},Building)==null,"ordinary hoe piece rejected");
+   Assert(rules.Verdict(new[]{"Cultivator"},Building)==null,"cultivator planting rejected");
    Assert(rules.Verdict(new[]{"ModdedTerraformer"},Terrain)==BuildToolRules.ExcludedPieceReason,"modded terrain piece accepted");
   });
   Test("the piece rule outranks an allowed tool",()=>{
@@ -33,7 +33,7 @@ static class BuildToolTests {
   Test("a piece in several tables qualifies through any allowed one",()=>{
    var rules=Defaults();
    Assert(rules.Verdict(new[]{"Hoe","OdinsHammer"},Building)==null,"allowed placer ignored");
-   Assert(rules.Verdict(new[]{"Hoe","Cultivator"},Building)==BuildToolRules.ExcludedToolReason,"all placers denied yet accepted");
+   Assert(new BuildToolRules("","Hoe,Cultivator","").Verdict(new[]{"Hoe","Cultivator"},Building)==BuildToolRules.ExcludedToolReason,"all placers denied yet accepted");
   });
   Test("allow list restricts, deny list still wins",()=>{
    var rules=new BuildToolRules("Hammer, Hoe","Hoe",BuildToolRules.DeniedPieceComponentDefault);
@@ -55,7 +55,7 @@ static class BuildToolTests {
   });
   Test("summary reports the effective lists",()=>{
    Assert(new BuildToolRules("","","").Summary.Contains("every build tool"),"default allow description");
-   Assert(Defaults().Summary.Contains("Hoe")&&Defaults().Summary.Contains("TerrainOp"),"defaults missing from summary");
+   Assert(Defaults().Summary.Contains("denyTools=none")&&Defaults().Summary.Contains("TerrainOp"),"defaults missing from summary");
    Assert(Defaults().DeniedComponentCount==BuildToolRules.DeniedPieceComponentDefault.Split(',').Length,"component defaults lost");
   });
   return passed;

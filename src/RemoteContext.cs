@@ -66,7 +66,7 @@ namespace RunicStorageNetwork {
    var point=actor.GetPosition();Piece.Requirement[] req;
    if(op.Build){
     var prefab=ZNetScene.instance.GetPrefab(op.Target);var piece=prefab?prefab.GetComponent<Piece>():null;
-    reason="invalid hammer piece";if(!piece||!piece.m_enabled||op.Quality!=0||op.Multiplier!=1)return false;
+    reason="invalid build piece";if(!piece||!piece.m_enabled||op.Quality!=0||op.Multiplier!=1)return false;
     reason=BuildToolPolicy.Reason(prefab);if(reason!=null)return false;
     reason="free building";if(ZoneSystem.instance.GetGlobalKey(piece.FreeBuildKey()))return false;
     reason="missing build station";

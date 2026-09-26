@@ -23,13 +23,27 @@ namespace RunicStorageNetwork {
   internal static PieceTable BuildTable(Player p){
    if(!p||p!=Player.m_localPlayer||!ObjectDB.instance)return null;
    var tool=(ItemDrop.ItemData)R.Call(p,"GetRightItem",Type.EmptyTypes);
-   var table=tool?.m_shared.m_buildPieces;
-   return table&&p.GetBuildTool()==table&&BuildToolPolicy.Table(table)?table:null;
+   var table=tool?.m_shared?.m_buildPieces;
+   return table&&p.GetBuildTool()==table&&BuildToolPolicy.Tool(tool)?table:null;
   }
   internal static bool BuildPiece(Player p,Piece piece){
    var table=BuildTable(p);if(!table||!piece||piece.m_repairPiece||piece.m_removePiece)return false;
    var prefab=ZNetScene.instance?ZNetScene.instance.GetPrefab(R.Id(piece.gameObject)):piece.gameObject;
-   return prefab&&table.m_pieces.Contains(prefab)&&BuildToolPolicy.Eligible(prefab);
+   return prefab&&table.m_pieces!=null&&table.m_pieces.Contains(prefab)&&BuildToolPolicy.PieceReason(prefab)==null;
+  }
+  // Match vanilla HaveRequirements' inventory check (shared item names, any quality).
+  // Enough carried materials must never depend on a network validation succeeding.
+  internal static bool LocalBuildMaterials(Player p,Piece piece,Player.RequirementMode mode){
+   if(!p||!piece)return false;
+   foreach(var req in piece.m_resources){
+    if(!req.m_resItem||req.m_amount<=0)continue;
+    int amount=mode==Player.RequirementMode.CanAlmostBuild?1:req.m_amount;
+    if(p.GetInventory().CountItems(req.m_resItem.m_itemData.m_shared.m_name)<amount)return false;
+   }
+   return true;
+  }
+  internal static bool BuildToolUsable(Player p,ItemDrop.ItemData tool){
+   return tool!=null&&(!tool.m_shared.m_useDurability||tool.m_durability>0)&&p.HaveStamina(tool.m_shared.m_attack.m_attackStamina);
   }
   internal static Core Context(Player p,bool craft){if(!p||p!=Player.m_localPlayer||!Plugin.Enabled||(!craft&&!BuildTable(p)))return null;var station=p.GetCurrentCraftingStation();if(craft&&(!station||station.m_upgrader))return null;return Core.Choose(craft?station.transform.position:p.transform.position,p.GetPlayerID());}
   internal static bool Craft(InventoryGui gui,Player p){
@@ -41,8 +55,9 @@ namespace RunicStorageNetwork {
   }
 
   internal static bool Build(Player p,Piece piece){
-   if(Active!=null)return true;if(Waiting!=null)return false;
-   if(!BuildPiece(p,piece))return true;var core=Context(p,false);
+   if(Active!=null||!BuildPiece(p,piece))return true;if(Waiting!=null)return false;
+   if(LocalBuildMaterials(p,piece,Player.RequirementMode.CanBuild))return true;
+   var core=Context(p,false);
    if(!core||p.NoCostCheat()||R.Get<bool>(p,"m_noPlacementCost")||ZoneSystem.instance.GetGlobalKey(piece.FreeBuildKey()))return true;
    var op=Create(p,core,true,R.Id(piece.gameObject),0,1);
    if(piece.m_craftingStation){var station=CraftingStation.HaveBuildStationInRange(piece.m_craftingStation.m_name,p.transform.position);if(station&&R.Valid(R.View(station)))op.Station=R.View(station).GetZDO().m_uid;}
@@ -106,7 +121,7 @@ namespace RunicStorageNetwork {
   static bool Intent(Pending p,out string reason){
    reason="player context changed";if(p.Cancelled||!p.Player||p.Player!=Player.m_localPlayer||p.Player.IsDead()||p.Player.NoCostCheat())return false;
    if(p.Op.Build){
-    reason="hammer context changed";if(!BuildPiece(p.Player,p.Piece)||!p.Player.InPlaceMode()||p.Player.GetSelectedPiece()!=p.Piece||(ItemDrop.ItemData)R.Call(p.Player,"GetRightItem",Type.EmptyTypes)!=p.Tool)return false;
+    reason="build tool context changed";if(!BuildPiece(p.Player,p.Piece)||!p.Player.InPlaceMode()||p.Player.GetSelectedPiece()!=p.Piece||(ItemDrop.ItemData)R.Call(p.Player,"GetRightItem",Type.EmptyTypes)!=p.Tool)return false;
    }else{
     reason="craft cancelled/changed";if(!p.Gui||!InventoryGui.IsVisible()||p.Player.GetCurrentCraftingStation()?.GetComponent<ZNetView>().GetZDO()?.m_uid!=p.Op.Station||R.Get<Recipe>(p.Gui,"m_craftRecipe")!=p.Recipe||R.Get<ItemDrop.ItemData>(p.Gui,"m_craftUpgradeItem")!=p.Upgrade)return false;
     var selection=R.Get<object>(p.Gui,"m_selectedRecipe");if((Recipe)selection.GetType().GetProperty("Recipe").GetValue(selection,null)!=p.Recipe)return false;
@@ -134,7 +149,7 @@ namespace RunicStorageNetwork {
     }
     if(!pending.Player||pending.Player!=Player.m_localPlayer||pending.Player.IsDead()||pending.Player.NoCostCheat())throw new InvalidOperationException("player context changed");
     if(pending.Op.Build){
-     if(!BuildPiece(pending.Player,pending.Piece)||R.Get<bool>(pending.Player,"m_noPlacementCost")||!pending.Player.InPlaceMode()||pending.Player.GetSelectedPiece()!=pending.Piece||(ItemDrop.ItemData)R.Call(pending.Player,"GetRightItem",Type.EmptyTypes)!=pending.Tool||pending.Tool==null||pending.Tool.m_durability<=0||!pending.Player.HaveStamina(pending.Tool.m_shared.m_attack.m_attackStamina))throw new InvalidOperationException("hammer context changed");
+     if(!BuildPiece(pending.Player,pending.Piece)||R.Get<bool>(pending.Player,"m_noPlacementCost")||!pending.Player.InPlaceMode()||pending.Player.GetSelectedPiece()!=pending.Piece||(ItemDrop.ItemData)R.Call(pending.Player,"GetRightItem",Type.EmptyTypes)!=pending.Tool||!BuildToolUsable(pending.Player,pending.Tool))throw new InvalidOperationException("build tool context changed");
      R.Call(pending.Player,"UpdatePlacementGhost",new[]{typeof(bool)},false);var ghost=R.Get<GameObject>(pending.Player,"m_placementGhost");
      if(!ghost||R.Get<object>(pending.Player,"m_placementStatus").ToString()!="Valid"||Vector3.Distance(ghost.transform.position,pending.Position)>0.05f||Quaternion.Angle(ghost.transform.rotation,pending.Rotation)>0.5f)throw new InvalidOperationException("placement moved/cancelled");
     }else{
@@ -148,7 +163,7 @@ namespace RunicStorageNetwork {
     try {
      pending.Delta.Apply();Plugin.Debug(id+" player debit confirmed");
      if(pending.Op.Build){
-      bool built=pending.Player.TryPlacePiece(pending.Piece);if(built){pending.Output=true;FinishHammer(pending);}
+      bool built=pending.Player.TryPlacePiece(pending.Piece);if(built){pending.Output=true;FinishBuild(pending);}
      }else {R.Set(pending.Gui,"m_craftVariant",pending.Variant);R.Set(pending.Gui,"m_multiCrafting",pending.Multi);pending.Gui.m_multiCraftAmount=pending.Op.Multiplier;R.Call(pending.Gui,"DoCrafting",new[]{typeof(Player)},pending.Player);}
      success=pending.Output;
      if(!success){pending.Delta.Restore();Plugin.Debug(id+" player delta restored: no result");}
@@ -159,7 +174,7 @@ namespace RunicStorageNetwork {
    }
    Outcomes.Record(id,success,success?"result observed":failure);if(success){Waiting=null;Stockroom.ClearObservations();CraftInspection.Clear();CraftOverview.Rescan();Topology.Dirty();}Transport.Instance.Result(id,success,success?"result observed":failure);
   }
-  static void FinishHammer(Pending p){
+  static void FinishBuild(Pending p){
    R.Set(p.Player,"m_lastToolUseTime",Time.time);p.Player.UseStamina((float)R.Call(p.Player,"GetBuildStamina",Type.EmptyTypes));
    var table=R.Get<PieceTable>(p.Player,"m_buildPieces");
    if(table.m_skill!=Skills.SkillType.None){int debt=R.Get<int>(p.Player,"m_buildRemoveDebt");if(debt>0)R.Set(p.Player,"m_buildRemoveDebt",debt-1);else p.Player.RaiseSkill(table.m_skill);}

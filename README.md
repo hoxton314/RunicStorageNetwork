@@ -8,7 +8,7 @@
 
 **Keep your resources in storage — craft and build where you need them.**
 
-Runic Storage Network connects your base's chests into a supply network. Craft and upgrade items at connected crafting stations, build with your hammer, and expand your base without hauling materials from one building to another.
+Runic Storage Network connects your base's chests into a supply network. Craft and upgrade items at connected crafting stations, build with your construction tools, and expand your base without hauling materials from one building to another.
 
 No terminals or additional inventories: use the familiar menus while the required materials are consumed directly from connected chests.
 
@@ -30,7 +30,7 @@ Both structures are built with the regular hammer near a workbench and require n
 
 1. Build a core near your storage chests.
 2. Place crafting stations within its coverage area, or extend the network to other buildings with relays.
-3. Use crafting stations and your hammer as usual — the required materials will be drawn from the available supply.
+3. Use crafting stations and your construction tools as usual — the required materials will be drawn from the available supply.
 
 Materials in your inventory are used first, followed by any missing materials from connected chests. Recipe requirements and crafting station level requirements still apply.
 
@@ -71,17 +71,17 @@ Exclusion always wins over inclusion, so a container listed in both is excluded.
 
 `rsn_status` in the console reports how many container types are supported and which are excluded, and the mod log lists them by name.
 
-Building draws on the network with any build tool, including hammers added by other mods. A tool takes part when the game gives it its own build menu, so nothing needs to be registered with this mod. The hoe and cultivator are excluded by default: they place terrain, not buildings.
+Building draws on the network with any build tool, including hammers added by other mods. A tool takes part when the game gives it its own build menu, so nothing needs to be registered with this mod. Ordinary build pieces and planting can use stored resources. Serving trays can also draw food from connected storage. Terrain shaping uses inventory resources by default.
 
 The `Building` section of the configuration decides which tools take part:
 
 | Setting | Default | Effect |
 |---|---|---|
 | `AllowedBuildTools` | empty | Empty: every build tool qualifies. Filled: only the listed item prefabs build from the network. |
-| `DeniedBuildTools` | `Hoe,Cultivator` | Item prefabs that never build from the network. |
+| `DeniedBuildTools` | empty | Item prefabs that never build from the network. |
 | `DeniedPieceComponents` | `TerrainOp,TerrainModifier` | A piece is never supplied when its prefab has one of these components. |
 
-Exclusion wins over inclusion here too, and these settings are administrator-only, so the server decides for the session. A piece that several tools can place stays available as long as one allowed tool can place it.
+Exclusion wins over inclusion here too, and these settings are administrator-only, so the server decides for the session. The equipped tool must be allowed, even if it shares a build menu with another tool. Excluded actions still work normally with materials in your inventory. When you already carry enough materials, building does not wait for the network. Normal placement and crafting station requirements still apply.
 
 Do not enable multiple crafting-from-chests systems at the same time without checking compatibility. Back up your world and character before installing or updating the mod.
 
@@ -101,7 +101,7 @@ MultiUserChest and Quick Stack Store Sort Trash Restock are optional. The curren
 
 **Ресурсы остаются на складе — стройте и создавайте предметы там, где удобно.**
 
-Runic Storage Network объединяет сундуки базы в сеть снабжения. Изготавливайте и улучшайте предметы на подключённых станках, стройте молотом и расширяйте базу, не перенося материалы из одного здания в другое.
+Runic Storage Network объединяет сундуки базы в сеть снабжения. Изготавливайте и улучшайте предметы на подключённых станках, стройте строительными инструментами и расширяйте базу, не перенося материалы из одного здания в другое.
 
 Никаких терминалов или новых инвентарей: вы пользуетесь привычными меню, а необходимые ресурсы расходуются прямо из подключённых сундуков.
 
@@ -123,7 +123,7 @@ Runic Storage Network объединяет сундуки базы в сеть �
 
 1. Постройте ядро рядом со складскими сундуками.
 2. Разместите станки в его зоне действия или протяните сеть реле к другим зданиям.
-3. Пользуйтесь станками и молотом как обычно — необходимые материалы будут взяты из доступного запаса.
+3. Пользуйтесь станками и строительными инструментами как обычно — необходимые материалы будут взяты из доступного запаса.
 
 Сначала расходуются материалы при себе, затем — недостающее из сундуков. Требования рецептов и уровни станков сохраняются.
 
@@ -164,17 +164,17 @@ Runic Storage Network объединяет сундуки базы в сеть �
 
 Команда `rsn_status` в консоли показывает, сколько типов хранилищ поддерживается и сколько исключено, а журнал мода перечисляет их по именам.
 
-Строительство берёт ресурсы из сети любым строительным инструментом, включая молоты из других модов. Инструмент участвует, если игра даёт ему собственное меню построек, поэтому регистрировать его в этом моде не нужно. Мотыга и культиватор исключены по умолчанию: они меняют ландшафт, а не строят.
+Строительство берёт ресурсы из сети любым строительным инструментом, включая молоты из других модов. Инструмент участвует, если игра даёт ему собственное меню построек, поэтому регистрировать его в этом моде не нужно. Обычные постройки и посадки могут использовать ресурсы хранилищ. Поднос также может брать еду из подключённых хранилищ. Изменение ландшафта по умолчанию использует ресурсы инвентаря.
 
 Состав инструментов задаётся в разделе `Building` конфигурации:
 
 | Параметр | По умолчанию | Действие |
 |---|---|---|
 | `AllowedBuildTools` | пусто | Пусто: подходит любой строительный инструмент. Заполнено: из сети строят только перечисленные префабы предметов. |
-| `DeniedBuildTools` | `Hoe,Cultivator` | Префабы предметов, которые никогда не строят из сети. |
+| `DeniedBuildTools` | пусто | Префабы предметов, которые никогда не строят из сети. |
 | `DeniedPieceComponents` | `TerrainOp,TerrainModifier` | Постройка не снабжается, если в её префабе есть один из этих компонентов. |
 
-Исключение здесь также важнее включения, а сами параметры доступны только администратору, поэтому состав определяет сервер. Постройка, доступная нескольким инструментам, остаётся доступной, пока её может поставить хотя бы один разрешённый инструмент.
+Исключение здесь также важнее включения, а сами параметры доступны только администратору, поэтому состав определяет сервер. Разрешён должен быть именно инструмент в руках, даже если его меню совпадает с меню другого инструмента. Исключённые действия продолжают работать с ресурсами инвентаря. Если нужных материалов в инвентаре достаточно, строительство не ждёт сеть. Обычные требования к размещению и верстаку сохраняются.
 
 Не включайте одновременно несколько систем крафта из сундуков без проверки совместимости. Перед установкой и обновлением делайте резервную копию мира и персонажа.
 

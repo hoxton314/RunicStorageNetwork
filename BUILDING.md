@@ -37,6 +37,8 @@ These tests require only the Unity compiler/reference assemblies and Windows, wi
 
 They cover resource planning, network graphs, reservations, recovery, localization, resource counts and the container and build-tool allow/deny rules. They do not simulate Valheim networking, Harmony patches or the game UI; multiplayer changes also need in-game testing.
 
+The same command also runs `BuildToolRuntimeTests.exe`. It compiles the production build-tool policy, planner and selected build/menu methods against game stand-ins to check shared menus, late registration, serving-tray supply and inventory-only fallback. It does not load the game or apply Harmony patches.
+
 ## Save local paths
 
 Optionally create `.local\BuildPaths.psd1`:

@@ -7,9 +7,9 @@ namespace RunicStorageNetwork.Logic {
  // types, so the isolated tests exercise exactly the rules the client and the
  // coordinator apply. Shares list parsing with ContainerRules.
  public sealed class BuildToolRules {
-  // The hoe and cultivator reach the same placement code as the hammer. Their pieces
-  // reshape ground rather than build, and were never supplied from the network.
-  public const string DeniedToolDefault="Hoe,Cultivator";
+  // Decide by the selected action, not by whether a tool is named Hammer. For
+  // example, planting can use the network while terrain shaping remains native.
+  public const string DeniedToolDefault="";
   // Component names, not prefab names, so modded terrain tools are covered by the same
   // rule. A name no installed assembly uses simply never matches.
   public const string DeniedPieceComponentDefault="TerrainOp,TerrainModifier";

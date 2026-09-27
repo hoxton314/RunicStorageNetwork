@@ -9,6 +9,6 @@
   "dimensionsUnity": [1.082, 1.494148, 0.820455],
   "fbxSha256": "d38d849720168d641964e66f0ddbc970f077ece8479e09fdb64b5c0f3afab389",
   "materialsSha256": "d98eae10ccc7d9f420d27f2de37b658356351668fdf0d1f86c53970adcb5a854",
-  "unityImportValidated": false,
+  "unityImportValidated": true,
   "gameValidated": false
 }

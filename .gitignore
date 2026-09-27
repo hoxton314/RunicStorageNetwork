@@ -25,6 +25,8 @@
 !/tools/TestReleaseValidation.ps1
 !/tools/BuildIcons.cs
 !/tools/BuildTerminalAssets.cs
+!/tools/BuildSurfaceUv.cs
+!/tools/PreviewTerminal.cs
 !/tools/IconSilhouette.shader
 !/model-sources/
 /model-sources/*

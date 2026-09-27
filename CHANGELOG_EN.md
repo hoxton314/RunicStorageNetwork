@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.7.0
+
+- Added a network storage window on the core with search, item counts and quantity selection.
+- Resources can now be retrieved from connected storage directly into your inventory.
+- Items of different qualities appear separately. Retrieved items keep their original properties.
+- Interact with the core to open storage; use the alternate interaction to rename the network.
+
 ## 0.6.0
 
 - Improved crafting-menu responsiveness on large storage networks by updating changed containers instead of repeatedly recounting every chest.

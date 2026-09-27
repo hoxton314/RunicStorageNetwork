@@ -47,6 +47,8 @@ The command also runs `StorageIndexRuntimeTests.exe`, `CraftInspectionRuntimeTes
 
 Starting with 0.6.0, ingredient-inspection replies include the owner's storage revision. Update all clients and the server together; the older reply format is incompatible.
 
+The `feature/core-terminal` branch adds a local 0.7.0 terminal prototype. Interact with a core to open the native Valheim-style window; alternate interaction retains network renaming. `TerminalRuntimeTests.exe` exercises the production delivery and receipt handlers against stand-ins: custom item data, quantity/quality checks, duplicate messages, cancellation, access changes, full inventories and partial-insertion rollback. A matching prototype is required on all peers. No release publication is part of this branch's local build.
+
 ## Save local paths
 
 Optionally create `.local\BuildPaths.psd1`:

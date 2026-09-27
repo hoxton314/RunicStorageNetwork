@@ -64,7 +64,12 @@ namespace RunicStorageNetwork {
    reason="supply unavailable";if(!Plugin.Enabled||!ZNetScene.instance||ZDOMan.instance==null)return false;
    if(!Actor(op.Actor,op.Peer,op.PlayerId,out var actor,out reason))return false;
    var point=actor.GetPosition();Piece.Requirement[] req;
-   if(op.Build){
+   if(op.Withdrawal){
+    if(!op.ReadRequirements(out reason))return false;
+    var terminal=Data(op.Core);var prefab=Prefab(terminal);reason="terminal unavailable";
+    if(!prefab||!prefab.GetComponent<Core>()||Vector3.Distance(point,terminal.GetPosition())>TerminalTransfer.UseDistance||!Ward(terminal.GetPosition()))return false;
+    req=null;
+   }else if(op.Build){
     var prefab=ZNetScene.instance.GetPrefab(op.Target);var piece=prefab?prefab.GetComponent<Piece>():null;
     reason="invalid build piece";if(!piece||!piece.m_enabled||op.Quality!=0||op.Multiplier!=1)return false;
     reason=BuildToolPolicy.Reason(prefab);if(reason!=null)return false;
@@ -92,7 +97,7 @@ namespace RunicStorageNetwork {
    foreach(var id in op.Nodes.Concat(new[]{op.Core}).Distinct())AddNode(Data(id));
    Graph=NetworkGraph.Automatic(nodes,Plugin.RelayLink.Value);
    if(!Connected(point)){RepairGraph();if(!Connected(point)){Plugin.Debug(op.Id+" coverage mismatch nodes="+nodes.Count+" point="+point);return false;}}
-   op.Needs=Stockroom.Requirements(req,op.Quality,op.Multiplier);reason="invalid requirements";
+   if(!op.Withdrawal)op.Needs=Stockroom.Requirements(req,op.Quality,op.Multiplier);reason="invalid requirements";
    if(op.Needs.Count==0||op.Needs.Count>32||op.Needs.Any(n=>n.Amount>100000))return false;
    foreach(var s in op.PlayerStock)if(s.Source!="player"||s.Amount<0||s.Amount>100000||!op.Needs.Any(n=>n.Item==s.Item)||s.Quality<1||s.Quality>100){reason="invalid character contribution";return false;}
    reason="ok";return true;

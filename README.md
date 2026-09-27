@@ -34,7 +34,9 @@ Both structures are built with the regular hammer near a workbench and require n
 
 Materials in your inventory are used first, followed by any missing materials from connected chests. Recipe requirements and crafting station level requirements still apply.
 
-Interact with a core to give its network an optional name using the standard Valheim text input window. Leave the field empty to remove the name. Connected cores share one network name. Hover over a connected container to see its network; unnamed networks simply show "Connected to network". Unconnected containers receive no additional line.
+Interact with a core to open network storage. Search for an item, choose a quantity and press **Take** to retrieve it into your inventory. Items of different qualities are listed separately; retrieved items keep their original properties. Depositing items through this window is not available.
+
+Use the alternate interaction on a core (Shift + E with default controls) to give its network an optional name using the standard Valheim text input window. Leave the field empty to remove the name. Connected cores share one network name. Hover over a connected container to see its network; unnamed networks simply show "Connected to network". Unconnected containers receive no additional line.
 
 ### Ranges and recipes
 
@@ -127,7 +129,9 @@ Runic Storage Network объединяет сундуки базы в сеть �
 
 Сначала расходуются материалы при себе, затем — недостающее из сундуков. Требования рецептов и уровни станков сохраняются.
 
-Взаимодействуйте с ядром, чтобы задать необязательное название сети через стандартное окно ввода Valheim. Пустое поле удаляет название. Соединённые ядра используют общее название сети. При наведении на подключённое хранилище показывается его сеть; для безымянной сети — просто «Подключено к сети». У неподключённых хранилищ дополнительной строки нет.
+Взаимодействуйте с ядром, чтобы открыть хранилище сети. Найдите предмет, выберите количество и нажмите **«Забрать»**, чтобы получить его в инвентарь. Предметы разного качества показаны отдельно и сохраняют свои свойства при получении. Складывание предметов через это окно пока недоступно.
+
+Дополнительное взаимодействие с ядром (Shift + E при стандартном управлении) позволяет задать необязательное название сети через стандартное окно ввода Valheim. Пустое поле удаляет название. Соединённые ядра используют общее название сети. При наведении на подключённое хранилище показывается его сеть; для безымянной сети — просто «Подключено к сети». У неподключённых хранилищ дополнительной строки нет.
 
 ### Радиусы и рецепты
 

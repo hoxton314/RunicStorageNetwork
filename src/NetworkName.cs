@@ -14,6 +14,7 @@ namespace RunicStorageNetwork {
    Vector3.Distance(player.transform.position,transform.position)<=10f&&Access.Ward(transform.position,player.GetPlayerID())&&Access.Ward(target.transform.position,player.GetPlayerID());
   public bool Interact(Humanoid user,bool hold,bool alt){
    if(hold||!(user is Player player)||player!=Player.m_localPlayer)return false;
+   if(!alt)return NetworkTerminal.Open(GetComponent<Core>(),player);
    Topology.Refresh();var target=Target;if(!CanEdit(player,target))return false;
    editing=target;TextInput.instance.RequestText(this,RsnLocalization.Text("network_name_input"),NetworkLabels.MaxLength);return true;
   }

@@ -119,9 +119,13 @@ if($Tests){
  if($LASTEXITCODE -ne 0){throw 'Preparation runtime tests failed'}
  $terminalProbe=Join-Path $Output 'TerminalRuntimeTests.exe'
  $terminalRsp=Join-Path $Output 'TerminalRuntimeTests.rsp'
+ $terminalAccess=Join-Path $Output 'TerminalAccessPointMethod.cs'
+ $accessMethod=Read-TestMethod 'src\RemoteContext.cs' 'internal bool TerminalPoint'
+ [IO.File]::WriteAllText($terminalAccess,"using UnityEngine; namespace RunicStorageNetwork { partial class RemoteContext {`n"+$accessMethod+"`n} }")
  $terminalLines=@('/nologo','/nostdlib+','/langversion:9','/target:exe','/define:TERMINAL_RUNTIME_TESTS',('/out:"'+$terminalProbe+'"'))
  $terminalLines+=@($refs | Select-Object -Unique | ForEach-Object {'/reference:"'+$_+'"'})
  $terminalLines+=@('src\TerminalTransfer.cs','src\TerminalDelivery.cs','src\TerminalRules.cs','src\Recovery.cs','src\Planner.cs','tests\TerminalRuntimeTests.cs' | ForEach-Object {'"'+(Join-Path $root $_)+'"'})
+ $terminalLines+='"'+$terminalAccess+'"'
  [IO.File]::WriteAllLines($terminalRsp,$terminalLines)
  & "$editor\NetCoreRuntime\dotnet.exe" "$editor\DotNetSdkRoslyn\csc.dll" "@$terminalRsp"
  if($LASTEXITCODE -ne 0){throw 'Terminal runtime test compilation failed'}

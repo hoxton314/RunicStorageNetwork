@@ -18,10 +18,10 @@ namespace RunicStorageNetwork {
    var view=prefab.AddComponent<ZNetView>();view.m_persistent=true;view.m_type=ZDO.ObjectType.Default;
    var piece=prefab.AddComponent<Piece>();piece.m_name="$rsn_codex_name";piece.m_description="$rsn_codex_description";piece.m_icon=icon;piece.m_canBeRemoved=true;
    var wear=prefab.AddComponent<WearNTear>();wear.m_health=400;wear.m_materialType=WearNTear.MaterialType.Stone;wear.m_noRoofWear=true;wear.m_noSupportWear=false;wear.m_burnable=false;
-   // Initial placement recipe for model review. Network interaction is added later.
-   var config=new PieceConfig{Name=piece.m_name,Description=piece.m_description,PieceTable="Hammer",CraftingStation="piece_workbench",Category="Crafting",Requirements=new[]{new RequirementConfig("Stone",6,0,true),new RequirementConfig("FineWood",4,0,true)}};
+   prefab.AddComponent<StorageCodex>();piece.m_usage=Piece.UsageTagFlags.Storage|Piece.UsageTagFlags.Crafting;
+   var config=new PieceConfig{Name=piece.m_name,Description=piece.m_description,PieceTable="Hammer",CraftingStation="piece_workbench",Category="Crafting",Usage=new[]{"Storage","Crafting"},Requirements=new[]{new RequirementConfig(RunicCodexItem.PrefabName,1,0,true),new RequirementConfig("FineWood",10,0,true),new RequirementConfig("Stone",8,0,true),new RequirementConfig("Iron",2,0,true),new RequirementConfig("JuteRed",2,0,true)}};
    if(!PieceManager.Instance.AddPiece(new CustomPiece(prefab,false,config)))throw new InvalidOperationException("Jotunn rejected Storage Codex");
-   prefab.SetActive(true);Plugin.Info(PrefabName+" registered with Hammer (visual build piece)");
+   prefab.SetActive(true);Plugin.Info(PrefabName+" registered with Hammer (network storage access)");
    return prefab;
   }
  }

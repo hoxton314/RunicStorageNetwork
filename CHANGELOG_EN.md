@@ -1,8 +1,11 @@
 # Changelog
 
-## Unreleased
+## 0.8.0
 
-- Added the Storage Codex, a decorative book stand with a dark leather cover and a glowing rune carved into its stone pedestal.
+- Added the Runic Codex, crafted at a forge from silver, crystals, greydwarf eyes, linen thread and leather scraps.
+- Added the Storage Codex, a buildable book stand for searching and retrieving items from connected storage. Build it with a hammer using a Runic Codex, fine wood, stone, iron and red jute.
+- Moved the storage window from the core to the Storage Codex. Place it within the supply range of a core or connected relay.
+- Interacting with a core now opens network renaming.
 
 ## 0.7.5
 

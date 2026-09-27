@@ -6,9 +6,9 @@ This is a copy of the latest `export_v19` FBX and its numeric material specifica
 
 The local asset pipeline copies these files into its separate UnityBuild project. `tools/BuildTerminalAssets.cs` imports the FBX with the original normals and scale, prepares materials, adds physical surface colliders, and adds the prefab and menu icon to the existing bundle. Source projects are not modified. The standalone DLL compile cannot generate this bundle.
 
-The plugin registers a buildable piece in Hammer → Crafting. Its initial placement cost is 6 Stone and 4 Fine Wood at a workbench; balance is provisional while the model is reviewed. Placement, damage and destruction effects come from the vanilla stone floor. The piece does not yet open storage, join networks or supply resources. The existing core terminal UI stays attached to the core.
+The plugin registers a buildable piece in Hammer → Crafting near a workbench. It costs Runic Codex ×1, Fine Wood ×10, Stone ×8, Iron ×2 and Red Jute ×2; all materials are recoverable. Placement, damage and destruction effects come from the vanilla stone floor. The runtime `StorageCodex` component opens the network storage window in the supply range of a core or connected relay. It does not extend coverage. The core now opens only network renaming.
 
-The model has been imported and rendered in Unity 6000.0.75f1 using the prepared material bindings. The import checks passed for 13 meshes, 3,710 triangles, dimensions and floor origin. **No DLL, asset bundle or test package has been built for this model integration.** Bundle validation and runtime lighting/placement still need review after the model is ready.
+The model is imported and rendered in Unity 6000.0.75f1 using the prepared material bindings. Import checks cover the 13 meshes, source geometry, dimensions and floor origin; the full build also validates the reopened bundle. Runtime lighting, placement and multiplayer interactions still need in-game review.
 
 ## Material preparation
 
@@ -28,4 +28,4 @@ For model-only renders, also copy `tools/PreviewTerminal.cs` into the Editor fol
 
 The pedestal rune is cut into the stone by an exact Boolean on the single block beneath it. All four strokes are recessed by 4 mm, and their emissive faces sit 0.3 mm above the groove floor. The source FBX stays untouched. Blender ray checks measured the floor depth with a maximum error below 0.000001 m, and Unity verified the source coordinate mapping before replacing only the stone and pedestal rune meshes. The derived model has 3,806 triangles (452 stone triangles); the 3,710 count above describes the original v19 export.
 
-The leather cover and spine now have a solid dark-brown albedo with low smoothness and an explicit non-metal mask. Silver has its own metal mask. The cover is visually checked separately from the pages and silver trim. These changes were rendered in Unity only; no plugin DLL or release package was built.
+The leather cover and spine have a solid dark-brown albedo with low smoothness and an explicit non-metal mask. Silver has its own metal mask. The cover is visually checked separately from the pages and silver trim.

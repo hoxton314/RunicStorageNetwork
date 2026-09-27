@@ -4,7 +4,7 @@
   "prefabId": "RSN_RunicCodex",
   "assetKind": "item-visual",
   "englishName": "Runic Codex",
-  "russianName": "Рунический кодекс",
+  "russianName": "Рунный кодекс",
   "sourceTriangles": 813,
   "preparedTriangles": 813,
   "sourceMeshGroups": 7,
@@ -15,6 +15,6 @@
   "unityVersion": "6000.0.75f1",
   "unityImportValidated": true,
   "iconSize": 256,
-  "itemRegistered": false,
+  "itemRegistered": true,
   "gameValidated": false
 }

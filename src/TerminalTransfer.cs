@@ -9,14 +9,15 @@ namespace RunicStorageNetwork {
   internal const string Prefix="rsn_take:";
   internal const float UseDistance=5f;
   internal const int MaxBytes=1024*1024;
-  sealed class Pending {internal Operation Op;internal Player Player;internal Core Core;internal float Sent,Started;internal bool Cancelled;internal TerminalDelivery Delivery;internal string Failure;}
+  sealed class Pending {internal Operation Op;internal Player Player;internal Core Core;internal StorageCodex AccessPoint;internal float Sent,Started;internal bool Cancelled;internal TerminalDelivery Delivery;internal string Failure;}
   static Pending pending;
   static readonly OutcomeReceipts receipts=new OutcomeReceipts();
   internal static bool Busy=>pending!=null;
   internal static bool Contains(string id,string key)=>pending?.Op.Id==id&&pending.Op.Sources.Contains(key);
   internal static void Clear(){pending=null;receipts.Clear();}
   internal static void Cancel(){if(pending!=null)pending.Cancelled=true;}
-  internal static bool CanUse(Core core,Player p)=>Plugin.Enabled&&core&&core.Valid&&p&&p==Player.m_localPlayer&&!p.IsDead()&&Vector3.Distance(core.transform.position,p.transform.position)<=UseDistance&&Access.Ward(core.transform.position,p.GetPlayerID());
+  internal static bool CanUse(StorageCodex access,Core core,Player p)=>Plugin.Enabled&&access&&access.Valid&&core&&core.Valid&&p&&p==Player.m_localPlayer&&!p.IsDead()&&
+   Vector3.Distance(access.transform.position,p.transform.position)<=UseDistance&&Access.Ward(access.transform.position,p.GetPlayerID())&&Access.Ward(core.transform.position,p.GetPlayerID())&&Topology.Supplies(core,access.transform.position,p.GetPlayerID());
   internal static bool Requirements(Operation op,out string reason){
    reason="invalid terminal request";
    if(!op.Withdrawal||op.Build||op.Quote||op.PlayerStock.Count!=0||op.Multiplier<1||op.Multiplier>TerminalRules.MaxAmount||op.Quality<1||op.Quality>100)return false;
@@ -26,22 +27,23 @@ namespace RunicStorageNetwork {
   }
   internal static bool Validate(Operation op,out Player p,out Core core,out string reason){
    p=Player.m_localPlayer;core=Operation.CoreObject(op.Core);reason="terminal unavailable";
-   if(!CanUse(core,p)||p.GetZDOID()!=op.Actor||p.GetPlayerID()!=op.PlayerId||op.Peer!=ZNet.GetUID())return false;
+   if(!CanUse(StorageCodex.Find(op.Station),core,p)||p.GetZDOID()!=op.Actor||p.GetPlayerID()!=op.PlayerId||op.Peer!=ZNet.GetUID())return false;
    return new RemoteContext(op).Validate(out reason);
   }
-  internal static bool Start(Core core,Player p,string item,int quality,int amount){
-   if(Busy||Actions.Waiting!=null||CraftPreparation.HasReservation||!CanUse(core,p))return false;
-   var op=new Operation{Id=Guid.NewGuid().ToString("N"),Target=Prefix+item,Quality=quality,Multiplier=amount,Actor=p.GetZDOID(),Station=ZDOID.None,Core=core.Id,Network=core.GetComponent<NetworkMember>().SavedNetwork,Peer=ZNet.GetUID(),PlayerId=p.GetPlayerID()};
+  internal static bool Start(StorageCodex access,Core core,Player p,string item,int quality,int amount){
+   if(Busy||Actions.Waiting!=null||CraftPreparation.HasReservation||!CanUse(access,core,p))return false;
+   // Station carries the access-point identity for withdrawals; Core still identifies storage.
+   var op=new Operation{Id=Guid.NewGuid().ToString("N"),Target=Prefix+item,Quality=quality,Multiplier=amount,Actor=p.GetZDOID(),Station=access.Id,Core=core.Id,Network=core.GetComponent<NetworkMember>().SavedNetwork,Peer=ZNet.GetUID(),PlayerId=p.GetPlayerID()};
    if(!op.Validate(out _,out _,out _))return false;
    var plan=Planner.Plan(op.Needs,StorageIndex.Query(core,p.GetPlayerID(),op.Needs),true);
    if(plan==null){StorageIndex.Reconcile(core);return false;}
    var proposal=new Actions.Pending{Op=op,Player=p};if(!Actions.Propose(proposal,plan))return false;
    op.PlayerStock.Clear(); // Withdrawals never pay from the character's own inventory.
-   pending=new Pending{Op=op,Player=p,Core=core,Started=Time.unscaledTime,Sent=-100};Tick();return true;
+   pending=new Pending{Op=op,Player=p,Core=core,AccessPoint=access,Started=Time.unscaledTime,Sent=-100};Tick();return true;
   }
   internal static void Tick(){
    var current=pending;if(current==null)return;
-   if(!CanUse(current.Core,current.Player))current.Cancelled=true;
+   if(!CanUse(current.AccessPoint,current.Core,current.Player)||current.AccessPoint.Id!=current.Op.Station)current.Cancelled=true;
    if(Time.unscaledTime-current.Sent<2)return;current.Sent=Time.unscaledTime;
    if(Time.unscaledTime-current.Started>10)Plugin.Critical(current.Op.Id,"Terminal transfer acknowledgement delayed; retrying the same request");
    try{Transport.Instance.Begin(current.Op);}catch(Exception e){Plugin.Debug("terminal retry: "+e.Message);}
@@ -77,7 +79,7 @@ namespace RunicStorageNetwork {
    try{
     if(current.Failure!=null){current.Delivery?.Restore();}
     else{
-     if(current.Cancelled||!NetworkTerminal.Showing(current.Core)||!current.Op.Validate(out _,out _,out reason))throw new InvalidOperationException(reason);
+     if(current.Cancelled||!NetworkTerminal.Showing(current.AccessPoint,current.Core)||!current.Op.Validate(out _,out _,out reason))throw new InvalidOperationException(reason);
      var plan=Wire.Debits(p);
      if(plan.Count==0||plan.Any(d=>!current.Op.Sources.Contains(d.Source)||d.Item!=current.Op.Needs[0].Item||d.Quality!=current.Op.Quality)||plan.Sum(d=>(long)d.Amount)!=current.Op.Multiplier)throw new InvalidOperationException("invalid terminal plan");
      var items=Unpack(p,plan);current.Delivery=new TerminalDelivery(current.Player.GetInventory());current.Delivery.Apply(items);success=true;

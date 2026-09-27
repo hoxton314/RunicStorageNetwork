@@ -7,13 +7,12 @@ using UnityEngine.UI;
 using RunicStorageNetwork.Logic;
 
 namespace RunicStorageNetwork {
- // UI lifetime is independent of the building. A future runic book can open
- // this same view after resolving its network access point.
+ // The view is shared, but every session is bound to one placed Storage Codex.
  public sealed class NetworkTerminal:MonoBehaviour {
   sealed class Entry {internal string Id,Name;internal int Quality,Count;internal ItemDrop Item;internal string Key=>Id+"/"+Quality;}
   sealed class Slot {internal GameObject Object;internal RectTransform Rect;internal Image Icon,Selection;internal Text Count,Quality;internal Button Button;internal UITooltip Tooltip;internal Entry Entry;}
   static NetworkTerminal instance;
-  Core core;Player player;GameObject panel;bool blocked;
+  Core core;StorageCodex accessPoint;Player player;GameObject panel;bool blocked;
   InputField search,quantity;Text heading,detail,available,carried,status,empty,qualityLabel;Image selectedIcon;Button take,minus,plus,stack;
   ScrollRect scroll;RectTransform content;readonly List<Slot> slots=new List<Slot>();
   List<Entry> entries=new List<Entry>(),filtered=new List<Entry>();Entry selected;
@@ -21,11 +20,11 @@ namespace RunicStorageNetwork {
   static readonly Vector2 Center=new Vector2(.5f,.5f);
   static readonly Color Gold=NetworkUiStyle.Gold,Muted=new Color(.78f,.75f,.67f),Bronze=NetworkUiStyle.Bronze;
   void Awake(){instance=this;}
-  internal static bool Showing(Core value)=>instance&&instance.panel&&instance.panel.activeSelf&&instance.core==value;
-  internal static bool Open(Core value,Player actor){
-   if(!instance||!TerminalTransfer.CanUse(value,actor)||TerminalTransfer.Busy||Actions.Waiting!=null||CraftPreparation.HasReservation||!GUIManager.CustomGUIFront)return false;
+  internal static bool Showing(StorageCodex access,Core value)=>instance&&instance.panel&&instance.panel.activeSelf&&instance.accessPoint==access&&instance.core==value;
+  internal static bool Open(StorageCodex access,Core value,Player actor){
+   if(!instance||!TerminalTransfer.CanUse(access,value,actor)||TerminalTransfer.Busy||Actions.Waiting!=null||CraftPreparation.HasReservation||!GUIManager.CustomGUIFront)return false;
    Close();if(InventoryGui.IsVisible())InventoryGui.instance.Hide();
-   instance.core=value;instance.player=actor;
+   instance.accessPoint=access;instance.core=value;instance.player=actor;
    try{instance.Create();StorageIndex.Reconcile(value);instance.Refresh();instance.RenderSlots();instance.UpdateDetail();GUIManager.BlockInput(true);instance.blocked=true;return true;}
    catch(Exception e){Plugin.Error("terminal UI",e);Close();return false;}
   }
@@ -33,12 +32,12 @@ namespace RunicStorageNetwork {
    if(!instance)return;TerminalTransfer.Cancel();
    if(instance.blocked){GUIManager.BlockInput(false);instance.blocked=false;}
    if(instance.panel){UITooltip.HideTooltip();instance.panel.SetActive(false);Destroy(instance.panel);}
-   instance.panel=null;instance.slots.Clear();instance.entries.Clear();instance.filtered.Clear();instance.selected=null;instance.selectedKey=null;instance.core=null;instance.player=null;instance.visibleStart=-1;instance.statusUntil=0;
+   instance.panel=null;instance.slots.Clear();instance.entries.Clear();instance.filtered.Clear();instance.selected=null;instance.selectedKey=null;instance.core=null;instance.accessPoint=null;instance.player=null;instance.visibleStart=-1;instance.statusUntil=0;
   }
   void OnDestroy(){if(instance==this){Close();instance=null;}}
   void Update(){
    if(!panel)return;
-   if(!TerminalTransfer.CanUse(core,player)||ZInput.GetKeyDown(KeyCode.Escape)||ZInput.GetButtonDown("JoyButtonB")){Close();return;}
+   if(!TerminalTransfer.CanUse(accessPoint,core,player)||ZInput.GetKeyDown(KeyCode.Escape)||ZInput.GetButtonDown("JoyButtonB")){Close();return;}
    try{
     var parent=panel.transform.parent as RectTransform;
     if(parent){float scale=Mathf.Min(1f,parent.rect.width/1120f,parent.rect.height/680f);panel.transform.localScale=Vector3.one*Mathf.Max(.25f,scale);}
@@ -176,7 +175,7 @@ namespace RunicStorageNetwork {
   }
   void Take(){
    if(selected==null||!TerminalRules.Quantity(quantity.text,selected.Count,out int amount)||TerminalTransfer.Busy)return;
-   if(!TerminalTransfer.Start(core,player,selected.Id,selected.Quality,amount))TransferStatus("terminal_retry");else TransferStatus("terminal_pending");
+   if(!TerminalTransfer.Start(accessPoint,core,player,selected.Id,selected.Quality,amount))TransferStatus("terminal_retry");else TransferStatus("terminal_pending");
    UpdateDetail();
   }
   internal static void TransferStatus(string key,params object[] args){if(!instance||!instance.panel)return;instance.status.text=T(key,args);instance.statusUntil=Time.unscaledTime+5;instance.nextRefresh=0;}

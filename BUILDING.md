@@ -49,7 +49,9 @@ The command also runs `StorageIndexRuntimeTests.exe`, `CraftInspectionRuntimeTes
 
 Starting with 0.6.0, ingredient-inspection replies include the owner's storage revision. Update all clients and the server together; the older reply format is incompatible.
 
-The `feature/core-terminal` branch adds a local 0.7.0 terminal prototype. Interact with a core to open the native Valheim-style window; alternate interaction retains network renaming. `TerminalRuntimeTests.exe` exercises the production delivery and receipt handlers against stand-ins: custom item data, quantity/quality checks, duplicate messages, cancellation, access changes, full inventories and partial-insertion rollback. A matching prototype is required on all peers. No release publication is part of this branch's local build.
+The `feature/core-terminal` branch adds the Storage Codex access point and a Runic Codex item crafted at a forge. Interact with the Storage Codex inside core/relay supply coverage to open storage; interacting with a core renames the network. For withdrawals, the existing operation `Station` field identifies the placed Storage Codex while `Core` identifies its storage network. The coordinator validates the stand's synchronized record, creator, distance, ward and supply coverage; it does not require a loaded stand instance on the host.
+
+`TerminalRuntimeTests.exe` exercises production delivery/receipt handlers and the extracted coordinator access-point check against stand-ins: custom item data, quantity/quality checks, duplicate messages, cancellation, stand destruction, lost coverage, wards, different open stands, full inventories and partial-insertion rollback. These do not verify real multiplayer or item registration. Use the matching build on all peers. No release publication is part of this branch's local build.
 
 ## Save local paths
 

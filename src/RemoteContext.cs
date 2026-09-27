@@ -66,8 +66,7 @@ namespace RunicStorageNetwork {
    var point=actor.GetPosition();Piece.Requirement[] req;
    if(op.Withdrawal){
     if(!op.ReadRequirements(out reason))return false;
-    var terminal=Data(op.Core);var prefab=Prefab(terminal);reason="terminal unavailable";
-    if(!prefab||!prefab.GetComponent<Core>()||Vector3.Distance(point,terminal.GetPosition())>TerminalTransfer.UseDistance||!Ward(terminal.GetPosition()))return false;
+    reason="terminal unavailable";if(!TerminalPoint(point,out point))return false;
     req=null;
    }else if(op.Build){
     var prefab=ZNetScene.instance.GetPrefab(op.Target);var piece=prefab?prefab.GetComponent<Piece>():null;
@@ -101,6 +100,13 @@ namespace RunicStorageNetwork {
    if(op.Needs.Count==0||op.Needs.Count>32||op.Needs.Any(n=>n.Amount>100000))return false;
    foreach(var s in op.PlayerStock)if(s.Source!="player"||s.Amount<0||s.Amount>100000||!op.Needs.Any(n=>n.Item==s.Item)||s.Quality<1||s.Quality>100){reason="invalid character contribution";return false;}
    reason="ok";return true;
+  }
+  internal bool TerminalPoint(Vector3 actor,out Vector3 point){
+   point=default;var terminal=Data(op.Station);var prefab=Prefab(terminal);
+   // Verify the placed stand from synchronized records even outside the host's loaded area.
+   if(!prefab||!prefab.GetComponent<StorageCodex>()||terminal.GetLong(ZDOVars.s_creator,0)==0)return false;
+   point=terminal.GetPosition();
+   return Vector3.Distance(actor,point)<=TerminalTransfer.UseDistance&&Ward(point);
   }
   void AddNode(ZDO z){
    var prefab=Prefab(z);if(!prefab)return;bool root=prefab.GetComponent<Core>();if(!root&&!prefab.GetComponent<Relay>())return;

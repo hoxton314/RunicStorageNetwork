@@ -2,45 +2,12 @@
 
 ## 0.8.1
 
-- Fixed the Storage Codex placement preview disappearing and the stand being built far above the ground, with its construction sound out of earshot.
-
-## 0.8.0
-
-- Added the Runic Codex, crafted at a forge from silver, crystals, greydwarf eyes, linen thread and leather scraps.
-- Added the Storage Codex, a buildable book stand for searching and retrieving items from connected storage. Build it with a hammer using a Runic Codex, fine wood, stone, iron and red jute.
-- Moved the storage window from the core to the Storage Codex. Place it within the supply range of a core or connected relay.
-- Interacting with a core now opens network renaming.
-
-## 0.7.5
-
-- Updated core and relay icons with directional lighting and softer highlights to make their shapes easier to read.
-- Updated the mod icon to match the core's new icon.
-
-## 0.7.4
-
-- Fixed clipped borders on the outer item slots in network storage.
-
-## 0.7.3
-
-- Replaced white item-slot backgrounds in network storage with subtle translucent backgrounds and borders.
+- Added the Runic Codex, crafted at a level 1 forge from silver, crystals, greydwarf eyes, linen thread and leather scraps.
+- Added the Storage Codex, a book stand built with a hammer from a Runic Codex, fine wood, stone, iron and red jute. Place it within the supply range of a core or connected relay.
+- Interact with a Storage Codex to search connected storage, choose an amount and retrieve items into your inventory.
+- The storage window shows item counts, icons and descriptions. Items of different qualities appear separately, and retrieved items keep their original properties.
 - Updated the core's network-renaming dialog to match the storage window.
-
-## 0.7.2
-
-- Redesigned network storage with a dark background, an item grid and a compact withdrawal panel.
-- Hover over a resource to see its name and description. Item quality is marked in the grid.
-- Stock updates preserve your selection and keep the resource you are viewing in place where possible.
-
-## 0.7.1
-
-- Fixed the network storage window failing to open when interacting with a core.
-
-## 0.7.0
-
-- Added a network storage window on the core with search, item counts and quantity selection.
-- Resources can now be retrieved from connected storage directly into your inventory.
-- Items of different qualities appear separately. Retrieved items keep their original properties.
-- Interact with the core to open storage; use the alternate interaction to rename the network.
+- Updated core and relay icons with directional lighting and softer highlights. The mod icon now uses the updated core icon.
 
 ## 0.6.0
 

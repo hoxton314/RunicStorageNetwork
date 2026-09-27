@@ -1,0 +1,127 @@
+name: Hexium release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing release tag (for example v0.5.6)"
+        required: true
+        type: string
+      publish:
+        description: "Publish to Hexium after validation (off = validation only)"
+        default: false
+        type: boolean
+
+permissions:
+  # Draft release downloads require this; no releases are modified.
+  contents: write
+
+concurrency:
+  group: hexium-publish
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: github.repository == 'rerit33/RunicStorageNetwork' && (github.event_name == 'workflow_dispatch' || !github.event.release.prerelease)
+    runs-on: windows-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
+      GH_REPO: ${{ github.repository }}
+      HEXIUM_REPOSITORY: https://valheim.hexium.gg
+      PUBLISH_PACKAGE: ${{ github.event_name == 'release' || inputs.publish }}
+    steps:
+      - name: Checkout publishing tools
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Check release and download package
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ($env:RELEASE_TAG -cnotmatch '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$') { throw 'Expected vMAJOR.MINOR.PATCH' }
+          $release = gh release view $env:RELEASE_TAG --repo $env:GH_REPO --json isDraft,isPrerelease,tagName | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0) { throw 'Release not found' }
+          if ($env:PUBLISH_PACKAGE -eq 'true' -and ($release.isDraft -or $release.isPrerelease)) { throw 'Only published stable releases can be uploaded' }
+          $version = $env:RELEASE_TAG.Substring(1)
+          "PACKAGE_VERSION=$version" >> $env:GITHUB_ENV
+          New-Item -ItemType Directory -Path artifacts -Force | Out-Null
+          gh release download $env:RELEASE_TAG --repo $env:GH_REPO --pattern "RunicStorageNetwork-$version.zip" --dir artifacts
+          if ($LASTEXITCODE -ne 0) { throw 'Release ZIP is missing' }
+
+      # A separate source checkout permits backfilling releases predating this workflow.
+      - name: Checkout matching release source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+          path: release-source
+          persist-credentials: false
+
+      - name: Validate package and dependencies
+        run: |
+          ./tools/ValidateRelease.ps1 -Package "artifacts/RunicStorageNetwork-$env:PACKAGE_VERSION.zip" -Tag $env:RELEASE_TAG -SourceRoot release-source
+          $manifest = Get-Content release-source/manifest.json -Raw | ConvertFrom-Json
+          foreach ($dependency in $manifest.dependencies) {
+            if ($dependency -match '^[^-]+-BepInExPack_Valheim-') { continue } # Assumed by Hexium.
+            if ($dependency -notmatch '^([^-]+)-([^-]+)-(\d+\.\d+\.\d+)$') { throw "Unsupported dependency: $dependency" }
+            $uri = "$env:HEXIUM_REPOSITORY/api/experimental/package/$($Matches[1])/$($Matches[2])/$($Matches[3])/"
+            Invoke-RestMethod -Uri $uri -TimeoutSec 30 | Out-Null
+          }
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Install official Thunderstore CLI
+        run: |
+          dotnet tool install tcli --version 0.2.4 --tool-path .tools
+          if ($LASTEXITCODE -ne 0) { throw 'TCLI installation failed' }
+
+      - name: Check Hexium configuration without uploading
+        env:
+          DOTNET_ROLL_FORWARD: Major
+          TCLI_AUTH_TOKEN: ''
+        run: |
+          $config = (Get-Content hexium.toml -Raw).Replace('versionNumber = "0.0.0"', "versionNumber = `"$env:PACKAGE_VERSION`"")
+          [IO.File]::WriteAllText((Join-Path (Get-Location) 'artifacts/hexium-publish.toml'), $config)
+          $output = & ./.tools/tcli.exe publish --config-path artifacts/hexium-publish.toml --file "artifacts/RunicStorageNetwork-$env:PACKAGE_VERSION.zip" 2>&1
+          $plain = [regex]::Replace(($output -join "`n"), '\x1B\[[0-?]*[ -/]*[@-~]', '')
+          if ($LASTEXITCODE -eq 0 -or $plain -notmatch 'Auth AuthToken') { throw 'TCLI did not reach the expected missing-token guard' }
+          $global:LASTEXITCODE = 0
+          Write-Output 'Hexium configuration accepted; no upload attempted.'
+
+      - name: Publish to Hexium and set install location
+        if: env.PUBLISH_PACKAGE == 'true'
+        env:
+          DOTNET_ROLL_FORWARD: Major
+          TCLI_AUTH_TOKEN: ${{ secrets.HEXIUM_AUTH_TOKEN }}
+        run: |
+          if (!$env:TCLI_AUTH_TOKEN) { throw 'Add repository secret HEXIUM_AUTH_TOKEN for the Rerit team on Hexium' }
+          $url = "$env:HEXIUM_REPOSITORY/api/experimental/package/Rerit/RunicStorageNetwork/$env:PACKAGE_VERSION/"
+          $existing = Invoke-WebRequest -Uri $url -SkipHttpErrorCheck -TimeoutSec 30
+          if ($existing.StatusCode -eq 404) {
+            & ./.tools/tcli.exe publish --config-path artifacts/hexium-publish.toml --file "artifacts/RunicStorageNetwork-$env:PACKAGE_VERSION.zip"
+            if ($LASTEXITCODE -ne 0) { throw 'Hexium publication failed. Check the package page before retrying.' }
+          } elseif ($existing.StatusCode -eq 200) {
+            Write-Output 'Version already exists; skipping upload and checking its metadata.'
+          } else { throw "Could not check existing version: HTTP $($existing.StatusCode)" }
+          $headers = @{ Authorization = "Bearer $env:TCLI_AUTH_TOKEN" }
+          # This mod is required on both client and server. Retry runs also repair metadata.
+          Invoke-RestMethod -Method Post -Uri "$env:HEXIUM_REPOSITORY/api/mod/Rerit/RunicStorageNetwork/set-metadata" -Headers $headers -ContentType 'application/json' -Body '{"install_location":"both"}' -TimeoutSec 30 | Out-Null
+          $version = Invoke-RestMethod -Uri $url -TimeoutSec 30
+          if ($version.version_number -cne $env:PACKAGE_VERSION -or $version.name -cne 'RunicStorageNetwork' -or $version.namespace -cne 'Rerit') { throw 'Published version verification failed' }
+
+      - name: Write result
+        run: |
+          if ($env:PUBLISH_PACKAGE -eq 'true') {
+            "Published to Hexium: https://valheim.hexium.gg/mods/Rerit/RunicStorageNetwork" >> $env:GITHUB_STEP_SUMMARY
+          } else {
+            'Package and Hexium configuration validated. Nothing was uploaded.' >> $env:GITHUB_STEP_SUMMARY
+          }

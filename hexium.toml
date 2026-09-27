@@ -1,0 +1,23 @@
+[config]
+schemaVersion = "0.0.1"
+
+[package]
+namespace = "Rerit"
+name = "RunicStorageNetwork"
+# Substituted with the validated release version by GitHub Actions.
+versionNumber = "0.0.0"
+description = "Runic Storage Network for Valheim"
+websiteUrl = "https://github.com/rerit33/RunicStorageNetwork"
+containsNsfwContent = false
+
+[package.dependencies]
+
+[build]
+outdir = "./artifacts/hexium"
+
+[publish]
+repository = "https://valheim.hexium.gg"
+communities = ["valheim"]
+
+[publish.categories]
+valheim = ["Building", "Crafting", "Storage", "Quality of Life", "Open Source", "Valheim 1.0"]

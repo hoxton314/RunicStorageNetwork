@@ -1,4 +1,4 @@
-# Publishing to Thunderstore
+# Publishing releases
 
 The [Thunderstore release workflow](https://github.com/rerit33/RunicStorageNetwork/actions/workflows/thunderstore.yml) uploads a prepared release ZIP to **Rerit/RunicStorageNetwork** in the **Valheim** community. It uses the official Thunderstore CLI.
 
@@ -41,8 +41,28 @@ Inspect the Actions log. A missing ZIP, mismatched version or stale documentatio
 
 Fix release assets while the GitHub release is still a draft, then repeat the manual validation. After publication, use a new version for package changes; do not move a published version tag. The workflow never overwrites or deletes an existing Thunderstore version.
 
+## Hexium
+
+The separate [Hexium release workflow](https://github.com/rerit33/RunicStorageNetwork/actions/workflows/hexium.yml) publishes the same prepared ZIP to **Rerit/RunicStorageNetwork** at **valheim.hexium.gg**. A failure on one platform does not prevent the other workflow from running. The Hexium categories are configured in `hexium.toml`.
+
+### One-time setup
+
+1. Sign in to Hexium and create or join the **Rerit** team. In team settings, create an API token with publishing access. If Hexium requests verification of the team name, complete that on the site first.
+2. Add the token as the repository Actions secret **HEXIUM_AUTH_TOKEN**, separately from Thunderstore's **TCLI_AUTH_TOKEN**. Never commit the token or paste it into an issue or workflow input.
+3. Run **Hexium release → Run workflow** on `main`, set `tag` to `v0.5.6` (or another existing release), and leave **publish** unchecked. This validates the release ZIP, checks dependencies on Hexium and parses the CLI configuration without credentials or an upload.
+4. For the first upload, run it again with **publish** checked. Only an already published, stable GitHub release can be uploaded this way. This also allows backfilling older releases without changing their tags.
+
+After setup, publishing a new stable GitHub release automatically starts both platform workflows. Ordinary pushes, pull requests and draft releases do not upload packages. Hexium's manual run uploads **only** when **publish** is explicitly checked; Thunderstore's manual run remains validation-only.
+
+Hexium accepts Thunderstore-compatible archives and assumes BepInExPack_Valheim, removing that dependency from its manifest metadata on upload. Jötunn remains a required dependency and is checked before publication. The original release ZIP is not modified by the workflow.
+
+After upload, the workflow sets Hexium's install location to **both client and server** and verifies the published version. A retry skips an existing version but still applies the install-location setting. If publication reports a connection error or succeeds before a later metadata step fails, inspect the package page before retrying; an accepted version must not be uploaded again.
+
 ## References
 
 - [Official Thunderstore CLI](https://github.com/thunderstore-io/thunderstore-cli)
 - [Thunderstore CLI authentication and prebuilt package publishing](https://github.com/thunderstore-io/thunderstore-cli/wiki)
 - [GitHub release workflow events](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#release)
+- [Hexium packaging and dependencies](https://hexium.gg/packaging)
+- [Hexium API reference](https://hexium.gg/api/docs/)
+- [Hexium team API tokens](https://hexium.gg/faq)

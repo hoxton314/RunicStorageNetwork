@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.7.5
+
+- Updated core and relay icons with directional lighting and softer highlights to make their shapes easier to read.
+- Updated the mod icon to match the core's new icon.
+
 ## 0.7.4
 
 - Fixed clipped borders on the outer item slots in network storage.

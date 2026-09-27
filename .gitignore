@@ -23,6 +23,8 @@
 !/tools/Compile.ps1
 !/tools/ValidateRelease.ps1
 !/tools/TestReleaseValidation.ps1
+!/tools/BuildIcons.cs
+!/tools/IconSilhouette.shader
 !/.github/
 /.github/*
 !/.github/ISSUE_TEMPLATE/

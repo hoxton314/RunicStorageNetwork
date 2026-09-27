@@ -8,7 +8,7 @@ The local asset pipeline copies these files into its separate UnityBuild project
 
 The plugin registers a buildable piece in Hammer → Crafting near a workbench. It costs Runic Codex ×1, Fine Wood ×10, Stone ×8, Iron ×2 and Red Jute ×2; all materials are recoverable. Placement, damage and destruction effects come from the vanilla stone floor. The runtime `StorageCodex` component opens the network storage window in the supply range of a core or connected relay. It does not extend coverage. The core now opens only network renaming.
 
-The model is imported and rendered in Unity 6000.0.75f1 using the prepared material bindings. Import checks cover the 13 meshes, source geometry, dimensions and floor origin; the full build also validates the reopened bundle. Runtime lighting, placement and multiplayer interactions still need in-game review.
+The model is imported and rendered in Unity 6000.0.75f1 using the prepared material bindings. Import checks cover the 13 meshes, source geometry, dimensions and floor origin; the full build also validates the reopened bundle. The solid stone base has a convex collider for Valheim's placement calculation; the six remaining colliders preserve their surface shapes. Editor checks exercise placement at different world positions, rotations and slopes, and reproduce the distant-placement failure when all colliders are non-convex. Runtime lighting, placement and multiplayer interactions still need in-game review.
 
 ## Material preparation
 

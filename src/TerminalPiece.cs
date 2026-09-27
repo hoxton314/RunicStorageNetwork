@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using Jotunn.Configs;
 using Jotunn.Entities;
 using Jotunn.Managers;
@@ -13,6 +14,7 @@ namespace RunicStorageNetwork {
    var icon=bundle.LoadAsset<Sprite>("assets/runicstoragegame/rsn_terminalicon.png");
    if(!prefab||!icon)throw new InvalidOperationException("Runic Storage Terminal assets missing");
    if(prefab.name!=PrefabName)throw new InvalidOperationException("Unexpected terminal prefab identity");
+   if(!prefab.GetComponentsInChildren<Collider>(true).Any(c=>c.enabled&&!c.isTrigger&&(!(c is MeshCollider mesh)||mesh.convex)))throw new InvalidOperationException("Storage Codex has no placement anchor. Update the AssetBundle together with the DLL.");
    prefab.SetActive(false);
    foreach(var t in prefab.GetComponentsInChildren<Transform>(true))t.gameObject.layer=LayerMask.NameToLayer("piece");
    var view=prefab.AddComponent<ZNetView>();view.m_persistent=true;view.m_type=ZDO.ObjectType.Default;

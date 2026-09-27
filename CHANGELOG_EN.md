@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.8.1
+
+- Fixed the Storage Codex placement preview disappearing and the stand being built far above the ground, with its construction sound out of earshot.
+
 ## 0.8.0
 
 - Added the Runic Codex, crafted at a forge from silver, crystals, greydwarf eyes, linen thread and leather scraps.

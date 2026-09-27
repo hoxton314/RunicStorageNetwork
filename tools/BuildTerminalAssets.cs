@@ -65,7 +65,10 @@ public static partial class BuildAssets {
     if(renderer.name=="RST_Stone"||renderer.name=="RST_Timber")SurfaceUv(renderer,renderer.name=="RST_Stone");
     // Physical surfaces of the stand/book, without a solid box spanning the gaps.
     if(new[]{"RST_Stone","RST_Timber","RST_Iron","RST_Silver","RST_Leather","RST_PageEdges","RST_Parchment"}.Contains(renderer.name)){
-     var collider=renderer.gameObject.AddComponent<MeshCollider>();collider.sharedMesh=renderer.GetComponent<MeshFilter>().sharedMesh;collider.convex=false;
+     var collider=renderer.gameObject.AddComponent<MeshCollider>();collider.sharedMesh=renderer.GetComponent<MeshFilter>().sharedMesh;
+     // Valheim ignores non-convex meshes when anchoring the placement ghost.
+     // Use the solid stone base as the anchor; retain the other surface shapes.
+     collider.convex=renderer.name=="RST_Stone";
     }
    }
    Check(Vector3.Distance(bounds.size,new Vector3(1.082f,1.494148f,.820455f))<.002f&&Mathf.Abs(bounds.min.y)<.001f,"Terminal scale/origin differs from v19");
@@ -89,7 +92,45 @@ public static partial class BuildAssets {
    Check(renderer.sharedMaterial&&renderer.sharedMaterial.shader&&!ShaderUtil.ShaderHasError(renderer.sharedMaterial.shader),"Terminal material missing");
   }
   int triangles=built.GetComponentsInChildren<MeshFilter>().Sum(f=>f.sharedMesh.triangles.Length/3);
-  File.WriteAllText(Path.Combine(output,"TerminalAssetReport.json"),"{\"source\":\"v19\",\"triangles\":"+triangles+",\"renderers\":13,\"colliders\":7,\"pedestalEngraved\":true,\"bundleReload\":true,\"interaction\":false}");
+  int placements=ValidateTerminalPlacement(built);
+  File.WriteAllText(Path.Combine(output,"TerminalAssetReport.json"),"{\"source\":\"v19\",\"triangles\":"+triangles+",\"renderers\":13,\"colliders\":7,\"convexBase\":true,\"placementChecks\":"+placements+",\"oldPlacementFailureReproduced\":true,\"pedestalEngraved\":true,\"bundleReload\":true,\"interaction\":false}");
+ }
+ static int ValidateTerminalPlacement(GameObject prefab){
+  // Editor physics only: replay the collider-selection/ClosestPoint calculation
+  // in the installed Player.UpdatePlacementGhost, without loading game scripts.
+  var ghost=UnityEngine.Object.Instantiate(prefab);
+  try{
+   ghost.SetActive(true);
+   var colliders=ghost.GetComponentsInChildren<MeshCollider>();
+   var stone=colliders.Single(c=>c.name=="RST_Stone");
+   Check(stone.convex&&colliders.Count(c=>c.convex)==1,"Terminal needs a convex stone placement anchor");
+   int checks=0;
+   foreach(var point in new[]{Vector3.zero,new Vector3(160,58,-96),new Vector3(-2030,87,5000)})
+   foreach(float yaw in new[]{0f,37f,135f,270f}){
+    var result=TerminalPlacementPosition(ghost,point,Vector3.up,Quaternion.Euler(0,yaw,0),out int anchors);
+    Check(anchors==1&&Vector3.Distance(result,point)<.015f,"Terminal placement drift: "+(result-point));checks++;
+   }
+   var slopePoint=new Vector3(1700,60,-900);
+   foreach(var normal in new[]{new Vector3(.25f,1,-.15f).normalized,new Vector3(-.4f,1,.2f).normalized})
+   foreach(float yaw in new[]{0f,90f,225f}){
+    var result=TerminalPlacementPosition(ghost,slopePoint,normal,Quaternion.Euler(0,yaw,0),out int anchors);
+    Check(anchors==1&&Vector3.Distance(result,slopePoint)<2f,"Terminal placement escapes sloped surface");checks++;
+   }
+   stone.convex=false;
+   var wrong=TerminalPlacementPosition(ghost,slopePoint,Vector3.up,Quaternion.identity,out int missing);
+   Check(missing==0&&Vector3.Distance(wrong,slopePoint)>100f,"Placement check failed to reproduce the old all-concave collider bug");
+   Debug.Log("RSN_TERMINAL_PLACEMENT_OK checks="+checks+"; old collider setup reproduces distant ghost");return checks;
+  }finally{UnityEngine.Object.DestroyImmediate(ghost);}
+ }
+ static Vector3 TerminalPlacementPosition(GameObject ghost,Vector3 point,Vector3 normal,Quaternion rotation,out int anchors){
+  ghost.transform.SetPositionAndRotation(point+normal*50f,rotation);Physics.SyncTransforms();
+  var closest=Vector3.zero;float distance=float.MaxValue;anchors=0;
+  foreach(var collider in ghost.GetComponentsInChildren<Collider>()){
+   if(collider.isTrigger||!collider.enabled||collider is MeshCollider mesh&&!mesh.convex)continue;
+   anchors++;var candidate=collider.ClosestPoint(point);float next=Vector3.Distance(candidate,point);
+   if(next<distance){closest=candidate;distance=next;}
+  }
+  return point+ghost.transform.position-closest;
  }
  static void ApplyTerminalEngraving(GameObject go,string modelPath){
   var data=JsonUtility.FromJson<TerminalEngraving>(File.ReadAllText(TerminalSource+"/TerminalEngraving.json"));

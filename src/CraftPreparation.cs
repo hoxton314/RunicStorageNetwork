@@ -5,20 +5,22 @@ using UnityEngine;
 using RunicStorageNetwork.Logic;
 
 namespace RunicStorageNetwork {
- // Only the selected recipe reserves stock. Cached chest totals are candidates
- // for a request, never evidence that the craft button may be enabled.
+ // Browsing uses indexed counts. An explicit click reserves the selected recipe;
+ // only owner-confirmed payment can start a network craft.
  internal static class CraftPreparation {
-  static Actions.Pending desired,offer,lostClaim;
+  static Actions.Pending desired,offer,lostClaim,requested;
   static OfferWindow window;
   static float nextProbe,lastSend,nextValidation,failureSince=-1;
   static string failure;
   static bool queued;
+  static float requestedAt,nextRecipeCheck;
+  static readonly Dictionary<string,float> reported=new Dictionary<string,float>();
   sealed class Release {internal float Since,Sent;}
   static readonly Dictionary<string,Release> retiring=new Dictionary<string,Release>();
-  internal static void Clear(){desired=offer=lostClaim=null;CraftOverview.Clear();CraftInspection.Clear();window=null;retiring.Clear();nextProbe=lastSend=0;failureSince=-1;failure=null;}
+  internal static void Clear(){desired=offer=lostClaim=requested=null;CraftOverview.Clear();CraftInspection.Clear();window=null;retiring.Clear();reported.Clear();nextProbe=lastSend=nextRecipeCheck=0;failureSince=-1;failure=null;}
   static bool Free(Player p)=>p.NoCostCheat()||ZoneSystem.instance.GetGlobalKey(GlobalKeys.NoCraftCost);
   static bool Same(Actions.Pending a,Actions.Pending b)=>a!=null&&b!=null&&a.Player==b.Player&&a.Gui==b.Gui&&a.Recipe==b.Recipe&&a.Op.Target==b.Op.Target&&a.Upgrade==b.Upgrade&&a.UpgradeQuality==b.UpgradeQuality&&a.Op.Station==b.Op.Station&&a.Op.Quality==b.Op.Quality&&a.Op.Multiplier==b.Op.Multiplier&&a.Variant==b.Variant;
-  internal static void Selection(InventoryGui gui,Player player){
+  internal static void Selection(InventoryGui gui,Player player,bool force=false){
    if(Actions.Active!=null)return;
    CraftOverview.Open(gui,player);
    if(!player||!gui||!InventoryGui.IsVisible()||player.IsDead()||Free(player)){Cancel();return;}
@@ -32,6 +34,9 @@ namespace RunicStorageNetwork {
    var claimed=window?.Claimed==true?offer:lostClaim;
    if(claimed!=null&&claimed.Recipe==recipe&&claimed.Upgrade==upgrade&&claimed.Op.Station==R.View(station)?.GetZDO()?.m_uid)return;
    bool multi=upgrade==null&&(ZInput.GetButton("AltPlace")||ZInput.GetButton("JoyLStick")||R.Get<bool>(gui,"m_touchMultiCrafting"));
+   int multiplier=multi?gui.m_multiCraftAmount:1,variant=R.Get<int>(gui,"m_selectedVariant");
+   if(!force&&desired!=null&&desired.Player==player&&desired.Gui==gui&&desired.Recipe==recipe&&desired.Upgrade==upgrade&&desired.UpgradeQuality==(upgrade?.m_quality??0)&&desired.Variant==variant&&desired.Op.Multiplier==multiplier&&desired.Op.Station==R.View(station)?.GetZDO()?.m_uid&&Time.unscaledTime<nextRecipeCheck)return;
+   nextRecipeCheck=Time.unscaledTime+.25f;
    var selection=new Actions.Pending{Player=player,Gui=gui,Recipe=recipe,Upgrade=upgrade,UpgradeQuality=upgrade?.m_quality??0,Variant=R.Get<int>(gui,"m_selectedVariant"),Multi=multi,
     Op=new Operation{Target=RecipeIndex.Key(recipe),Quality=upgrade==null?1:upgrade.m_quality+1,Multiplier=multi?gui.m_multiCraftAmount:1,Station=R.View(station)?.GetZDO()?.m_uid??ZDOID.None}};
    if(Same(desired,selection))return;
@@ -53,7 +58,10 @@ namespace RunicStorageNetwork {
    return Planner.Plan(needs,stock)!=null;
   }
   static bool Ready()=>offer!=null&&window!=null&&window.Ready(Time.unscaledTime)&&Same(desired,offer)&&RecipeIndex.Matches(offer.Recipe,offer.Op.Target)&&ContextValid(offer)&&PersonalShare(offer);
-  internal static List<Stock> Stock(Player p,IEnumerable<Need> needs,Recipe recipe=null,int quality=0,int multiplier=0)=>CraftOverview.Stock(p,needs);
+  internal static List<Stock> Stock(Player p,IEnumerable<Need> needs,Recipe recipe=null,int quality=0,int multiplier=0){
+   var scope=needs.ToList();var stock=CraftOverview.Stock(p,scope);
+   return offer!=null&&offer.Player==p&&Ready()?ReservationStock.Merge(stock,offer.Plan,scope):stock;
+  }
   internal static List<Stock> IngredientStock(Player p,Recipe recipe,int quality,int amount,List<Need> needs){
    // Vanilla's alternate-ingredient choice controls the actual debit and output
    // amount. A broad browsing count must never select network stock for a
@@ -64,20 +72,30 @@ namespace RunicStorageNetwork {
    return CraftOverview.Stock(p,needs);
   }
   internal static bool Available(Player p,Recipe r,int quality,int amount){
+   if(offer!=null&&offer.Player==p&&offer.Recipe==r&&offer.Op.Quality==quality&&offer.Op.Multiplier==amount&&Ready())return true;
    var needs=Stockroom.Requirements(r.m_resources,quality,amount);return Satisfies(r,needs,CraftOverview.Stock(p,needs));
   }
-  static bool CanStart(Actions.Pending p)=>Personal(p.Player,p.Recipe,p.Op.Quality,p.Op.Multiplier)||(Ready()&&Same(desired,p));
+  static bool CanStart(Actions.Pending p)=>Available(p.Player,p.Recipe,p.Op.Quality,p.Op.Multiplier);
   internal static bool Releasing=>retiring.Count>0;
   internal static bool Claimed=>window?.Claimed==true||lostClaim!=null;
+  internal static bool HasReservation=>offer!=null||lostClaim!=null;
   internal static bool Contains(string id,string key)=>offer?.Op.Id==id&&offer.Op.Sources.Contains(key);
   internal static bool Locked(Inventory inv)=>window?.Claimed==true&&offer!=null&&offer.Player&&offer.Player.GetInventory()==inv;
   internal static bool LockedItem(ItemDrop.ItemData item)=>window?.Claimed==true&&offer!=null&&offer.Player&&offer.Player.GetInventory().ContainsItem(item);
   static void Send(Action action){try{action();}catch(Exception e){Plugin.Debug("preflight transport: "+e.Message);}}
   internal static void Cancel(){
-   desired=null;lostClaim=null;CraftInspection.Clear();
+   desired=null;lostClaim=requested=null;CraftInspection.Clear();
    if(offer!=null){string id=offer.Op.Id;offer=null;window?.Cancel();window=null;retiring[id]=new Release{Since=Time.unscaledTime,Sent=Time.unscaledTime};Send(()=>Transport.Instance.DropQuote(id));}
   }
-  static void Retire(){var selection=desired;var claim=window?.Claimed==true?offer:null;Cancel();desired=selection;lostClaim=claim;nextProbe=Time.unscaledTime+.5f;}
+  static void Report(string reason){
+   float now=Time.unscaledTime;
+   if(reported.TryGetValue(reason,out float at)&&now-at<30)return;
+   if(reported.Count>=64)reported.Clear();reported[reason]=now;
+   Plugin.Info("Craft preparation interrupted: "+reason+"; recipe="+(desired?.Recipe?.name??"none")+"; claimed="+(window?.Claimed==true));
+  }
+  static void Retire(string reason="offer no longer valid"){
+   Report(reason);var selection=desired;var request=requested;var claim=window?.Claimed==true?offer:null;Cancel();desired=selection;requested=request;lostClaim=claim;nextProbe=Time.unscaledTime+.5f;
+  }
   internal static void Tick(){
    float now=Time.unscaledTime;
    foreach(var entry in retiring.ToArray()){
@@ -85,19 +103,25 @@ namespace RunicStorageNetwork {
     if(now-entry.Value.Sent>=2){entry.Value.Sent=now;Send(()=>Transport.Instance.DropQuote(entry.Key));}
    }
    if(Actions.Waiting!=null)return;
-   if(!ContextValid(desired)){if(desired!=null||offer!=null)Cancel();return;}
+   if(!ContextValid(desired)){if(offer!=null)Report("player, station or selected item context changed");if(desired!=null||offer!=null)Cancel();return;}
    if(lostClaim!=null)return;
-   var contextCore=Actions.Context(desired.Player,true);if(contextCore)CraftInspection.Ensure(desired,contextCore);
+   if(requested!=null&&Time.unscaledTime-requestedAt>=8){Report("craft request preparation timed out");Cancel();return;}
    if(offer!=null){
-    if(window.Confirmed&&!Ready()){Retire();return;}
-    if(!window.Confirmed&&now-offer.Started>=8){if(!queued)Problem("preflight confirmation timeout");Retire();return;}
-    if(window.Confirmed&&now>=nextValidation){nextValidation=now+.5f;if(!offer.Op.Validate(out _,out _,out _,false)){Retire();return;}}
-    if(window.Claimed&&R.Get<float>(offer.Gui,"m_craftTimer")<0){Retire();lostClaim=null;return;}
+    if(window.Confirmed&&!Ready()){Retire(!window.Ready(now)?"offer expired":!RecipeIndex.Matches(offer.Recipe,offer.Op.Target)?"recipe changed or disabled":!PersonalShare(offer)?"personal contribution changed":"craft context changed");return;}
+    if(!window.Confirmed&&now-offer.Started>=8){if(!queued)Problem("preflight confirmation timeout");Retire("preflight confirmation timeout");return;}
+    // Keep the pinned payment through the animation. Full world/path validation
+    // still runs on click, on accept at the coordinator and immediately before output.
+    if(window.Confirmed&&!window.Claimed&&now>=nextValidation){nextValidation=now+.5f;if(!offer.Op.Validate(out _,out _,out string why,false)){Retire(why);return;}}
+    if(window.Claimed&&R.Get<float>(offer.Gui,"m_craftTimer")<0){Retire("craft animation cancelled");lostClaim=null;return;}
     if(now-lastSend>=1){lastSend=now;var current=offer;Send(()=>{if(window.Claimed)Transport.Instance.HoldQuote(current.Op.Id);else if(!window.Confirmed)Transport.Instance.Begin(current.Op);});}
     return;
    }
-   if(retiring.Count>0||now<nextProbe||!CraftOverview.Ready(desired.Player)||!CraftInspection.Ready)return;nextProbe=now+1;
-   if(Personal(desired.Player,desired.Recipe,desired.Op.Quality,desired.Op.Multiplier)){failureSince=-1;return;}
+   var contextCore=Actions.Context(desired.Player,true);if(contextCore)CraftInspection.Ensure(desired,contextCore);
+   // Browsing only refreshes counts. Acquire a payment reservation only after
+   // the player explicitly requests this exact recipe.
+   if(requested==null||!Same(requested,desired))return;
+   if(retiring.Count>0||now<nextProbe||!CraftInspection.Ready)return;nextProbe=now+1;
+   if(Personal(desired.Player,desired.Recipe,desired.Op.Quality,desired.Op.Multiplier)){failureSince=-1;StartRequested();return;}
    try{
     var core=contextCore;if(!core)return;
     var op=Actions.Create(desired.Player,core,false,desired.Op.Target,desired.Op.Quality,desired.Op.Multiplier);op.Quote=true;
@@ -121,10 +145,22 @@ namespace RunicStorageNetwork {
    window.Confirm(Math.Min(offer.Started+8,Time.unscaledTime+remaining-.5));
    if(!window.Ready(Time.unscaledTime)){Retire();return;}
    failureSince=-1;failure=null;
+   StartRequested();
+  }
+  static void StartRequested(){
+   var request=requested;
+   if(request!=null&&Same(request,desired)){
+    var gui=request.Gui;var player=request.Player;
+    R.Call(gui,"UpdateRecipe",new[]{typeof(Player),typeof(float)},player,0f);
+    if(requested!=request||!Same(request,desired))return;
+    if(gui.m_craftButton.interactable)R.Call(gui,"OnCraftPressed",Type.EmptyTypes);
+    else {requested=null;Retire("craft checks no longer allow the selected recipe");}
+   }
   }
   internal static void Refused(string id,string reason){
    if(retiring.Remove(id))return;
    if(offer?.Op.Id!=id)return;
+   Report(reason);
    CraftInspection.Clear();
    if(window?.Claimed==true)lostClaim=offer;
    offer=null;window=null;nextProbe=Time.unscaledTime+1;Topology.Dirty();Problem(reason);
@@ -152,17 +188,23 @@ namespace RunicStorageNetwork {
   internal static void Button(InventoryGui gui){
    if(Actions.Active!=null)return;
    if(Actions.Waiting!=null)gui.m_craftButton.interactable=false;
+   if(requested!=null&&!Ready()&&!Personal(requested.Player,requested.Recipe,requested.Op.Quality,requested.Op.Multiplier))gui.m_craftButton.interactable=false;
    if(desired?.Gui==gui&&gui.m_craftButton.interactable&&(!CanStart(desired)||!Capacity(desired)))gui.m_craftButton.interactable=false;
    CraftOverview.RefreshRows(gui);
   }
   internal static bool Press(InventoryGui gui){
    if(Actions.Waiting!=null||window?.Claimed==true||lostClaim!=null)return false;
-   Selection(gui,Player.m_localPlayer);var p=desired;
+   Selection(gui,Player.m_localPlayer,true);var p=desired;
    if(p==null)return true;
    if(!gui.m_craftButton.interactable||!Capacity(p))return false;
    if(Personal(p.Player,p.Recipe,p.Op.Quality,p.Op.Multiplier)){Cancel();return true;}
-   if(!Ready()||!offer.Op.Validate(out _,out _,out _,false))return false;
+   if(!Ready()){
+    if(requested==null){requested=p;requestedAt=Time.unscaledTime;nextProbe=0;}
+    return false;
+   }
+   if(!offer.Op.Validate(out _,out _,out _,false))return false;
    if(!window.Claim(Time.unscaledTime))return false;
+   requested=null;
    lastSend=Time.unscaledTime;Send(()=>Transport.Instance.HoldQuote(offer.Op.Id));return true;
   }
   internal static void Pressed(InventoryGui gui){if(window?.Claimed==true&&R.Get<float>(gui,"m_craftTimer")<0){Retire();lostClaim=null;}}

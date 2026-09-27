@@ -84,6 +84,7 @@ namespace RunicStorageNetwork {
      // The component check rejects nearly every piece first; only real containers are named.
      var c=piece?piece.GetComponent<Container>():null;if(!c||!R.Valid(R.View(c)))continue;
      if(!ContainerPolicy.Eligible(R.Id(c.gameObject)))continue;
+     StorageIndex.Register(c);
      var key=cell(c.transform.position);if(!chests.TryGetValue(key,out var bucket))chests[key]=bucket=new List<Container>();bucket.Add(c);
     }
     foreach(var node in Graph.Nodes.Values.Where(n=>Graph.Hops.ContainsKey(n.Id))){
@@ -149,12 +150,13 @@ namespace RunicStorageNetwork {
  internal sealed class NetworkSystem:MonoBehaviour {
   ZNet world;
   void Update(){
-   if(world!=ZNet.instance){Topology.Clear();world=ZNet.instance;}
+   if(world!=ZNet.instance){Topology.Clear();StorageIndex.Clear();world=ZNet.instance;}
    if(!world||!ZNetScene.instance)return;Topology.CheckAccessRevision();Topology.Refresh();
 
+   StorageIndex.Tick();RecipeIndex.Background();
    HoverInfo.Tick();
    ContainerHover.Tick();
   }
-  void OnDestroy(){Topology.Clear();}
+  void OnDestroy(){Topology.Clear();StorageIndex.Clear();}
  }
 }

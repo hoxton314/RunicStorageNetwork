@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
+using System.Reflection;
 using UnityEngine;
 using RunicStorageNetwork.Logic;
 
@@ -16,18 +17,22 @@ namespace RunicStorageNetwork {
   static ObjectDB catalogued;
   static Recipe[] members=Array.Empty<Recipe>();
   static string[] names=Array.Empty<string>();
+  static readonly FieldInfo listVersion=typeof(List<Recipe>).GetField("_version",BindingFlags.Instance|BindingFlags.NonPublic);
+  static List<Recipe> recipeList;static int version;static float nextAudit;
   static readonly Dictionary<string,float> reported=new Dictionary<string,float>(StringComparer.Ordinal);
   internal static void Invalidate(){catalogued=null;members=Array.Empty<Recipe>();names=Array.Empty<string>();index=new NameIndex<Recipe>();reported.Clear();}
 
-  static bool Ready(){
+  static bool Ready(bool audit=false){
    var db=ObjectDB.instance;if(!db||db.m_recipes==null)return false;
-   bool changed=catalogued!=db||members.Length!=db.m_recipes.Count;
+   int currentVersion=listVersion==null?0:(int)listVersion.GetValue(db.m_recipes);
+   bool changed=catalogued!=db||recipeList!=db.m_recipes||members.Length!=db.m_recipes.Count||currentVersion!=version;
+   if(!changed&&!audit)return true;
    for(int i=0;!changed&&i<members.Length;i++){
     var recipe=db.m_recipes[i];
     changed=!ReferenceEquals(members[i],recipe)||names[i]!=(recipe?recipe.name:null);
    }
    if(changed){
-    catalogued=db;members=db.m_recipes.ToArray();names=new string[members.Length];index=new NameIndex<Recipe>();
+    catalogued=db;recipeList=db.m_recipes;version=currentVersion;members=db.m_recipes.ToArray();names=new string[members.Length];index=new NameIndex<Recipe>();
     for(int i=0;i<members.Length;i++){
      var recipe=members[i];names[i]=recipe?recipe.name:null;
      // Include disabled and unnamed registered recipes. Their eligibility is live.
@@ -36,7 +41,10 @@ namespace RunicStorageNetwork {
    }
    return true;
   }
-  internal static void Ensure(){Ready();}
+  internal static void Ensure(){Ready(true);}
+  // Catches in-place renames by mods that do not change List's version. This
+  // checks membership only; no recipe/resource fingerprints are recomputed.
+  internal static void Background(){if(Time.unscaledTime<nextAudit)return;nextAudit=Time.unscaledTime+2;Ready(true);}
   internal static string Key(Recipe recipe)=>recipe?Prefix+NameKey(recipe.name)+":"+Fingerprint(recipe):"";
   internal static bool Matches(Recipe recipe,string key)=>recipe&&recipe.m_enabled&&Key(recipe)==key;
   static bool Parts(string key,out string bucket,out string fingerprint){
@@ -45,7 +53,8 @@ namespace RunicStorageNetwork {
    bucket=key.Substring(5,64);fingerprint=key.Substring(70,64);return true;
   }
   internal static Recipe Find(string key)=>Find(key,out _);
-  internal static Recipe Find(string key,out string reason){
+  internal static Recipe Find(string key,out string reason)=>Find(key,out reason,true);
+  static Recipe Find(string key,out string reason,bool retry){
    Recipe found=null;reason="recipe unavailable";
    if(!Ready())reason="recipe database unavailable";
    else if(!Parts(key,out string bucket,out string fingerprint))reason="recipe identity missing or unsupported";
@@ -58,6 +67,9 @@ namespace RunicStorageNetwork {
      found=recipe;
     }
     if(found){reason="ok";return found;}
+   }
+   if(retry&&reason!="recipe database unavailable"&&reason!="recipe identity missing or unsupported"){
+    Ready(true);return Find(key,out reason,false);
    }
    Report(key,reason);return null;
   }

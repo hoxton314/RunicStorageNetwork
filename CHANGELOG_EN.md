@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.6.0
+
+- Improved crafting-menu responsiveness on large storage networks by updating changed containers instead of repeatedly recounting every chest.
+- Browsing recipes no longer reserves materials or holds containers for a craft. Reservations now begin when you press Craft.
+- Selecting a recipe refreshes its ingredients, including newly added supplies in previously empty storage.
+- Fixed ingredients disappearing from the crafting menu when a storage check is delayed or temporarily unavailable.
+- Confirmed materials stay available during the crafting animation while background counts update.
+- Fixed older storage replies overwriting newer resource counts.
+- Reduced repeated recipe checks while keeping support for recipes changed during a session.
+
 ## 0.5.6
 
 - Fixed network crafting choosing the wrong recipe when mods give several recipes the same internal name.

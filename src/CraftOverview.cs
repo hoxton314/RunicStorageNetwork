@@ -10,56 +10,35 @@ using RunicStorageNetwork.Logic;
 
 namespace RunicStorageNetwork {
  internal static class CraftOverview {
-  static readonly StockCatalog<Container> catalog=new StockCatalog<Container>();
   static InventoryGui gui;static Player player;static CraftingStation station;static Core core;
-  static float nextScan;static bool requestRecords,rowsDirty;
+  static float nextScan;static bool rowsDirty;static int revision=-1;
   static object[] rowQueue;static int rowIndex;
-  internal static void Clear(){catalog.Clear();gui=null;player=null;station=null;core=null;nextScan=0;requestRecords=rowsDirty=false;rowQueue=null;}
-  internal static void Rescan(){catalog.CancelScan();nextScan=0;}
+  internal static void Clear(){gui=null;player=null;station=null;core=null;nextScan=0;rowsDirty=false;rowQueue=null;revision=-1;}
+  internal static void Rescan(){nextScan=0;rowsDirty=true;}
   internal static void Open(InventoryGui current,Player actor){
    var at=actor?actor.GetCurrentCraftingStation():null;
    if(!actor||!current||!at||at.m_upgrader||!Plugin.Enabled){Clear();return;}
    if(gui==current&&player==actor&&station==at)return;
-   Clear();gui=current;player=actor;station=at;requestRecords=true;RecipeIndex.Ensure();
+   Clear();gui=current;player=actor;station=at;RecipeIndex.Ensure();
+   core=Actions.Context(player,true);if(core)StorageIndex.Reconcile(core);
   }
   internal static void Tick(){
    if(!gui)return;
    if(!InventoryGui.IsVisible()||!player||player.IsDead()||player.GetCurrentCraftingStation()!=station||!Plugin.Enabled){Clear();return;}
-   if(!catalog.Running){
-    if(Time.unscaledTime<nextScan)return;
-    var current=Actions.Context(player,true);
-    if(core!=current){core=current;catalog.Clear();requestRecords=true;rowsDirty=true;}
-    if(!core){nextScan=Time.unscaledTime+.5f;return;}
-    core.Scan();catalog.Begin(core.Pool.ToArray());
+   if(Time.unscaledTime>=nextScan){
+    nextScan=Time.unscaledTime+.5f;var current=Actions.Context(player,true);
+    if(core!=current){core=current;rowsDirty=true;}
    }
-   var clock=Stopwatch.StartNew();int revision=catalog.Revision;
-   try{catalog.Step(Read,16,()=>clock.Elapsed.TotalMilliseconds>=.75);}
-   catch(Exception e){catalog.Clear();nextScan=Time.unscaledTime+2;rowsDirty=true;Plugin.Error("craft-overview",e);return;}
-   if(!catalog.Running){
-    rowsDirty|=revision!=catalog.Revision;requestRecords=false;nextScan=Time.unscaledTime+1;
-    Plugin.Debug("Craft overview refreshed; containers="+core.Pool.Count+"; revision="+catalog.Revision+"; no reservations acquired");
-   }
-  }
-  static IEnumerable<Stock> Read(Container container){
-   // Viewing an inventory must not acquire a lease or treat a MUC slot lock as
-   // an empty chest. Access, world loading and network coverage still apply.
-   if(!core||!player||!Access.Container(container,player.GetPlayerID(),core,out _,ownLease:true))return Array.Empty<Stock>();
-   var view=R.View(container);var inventory=container.GetInventory();
-   if(requestRecords&&!view.IsOwner())ZDOMan.instance.RequestZDO(view.GetZDO().m_uid);
-   // Never call Load while another mod owns an inventory mutation. Vanilla
-   // otherwise advances m_lastRevision even if a mutation prefix rejects Load.
-   if(!Transport.Locked(inventory)&&!Integrations.IsBusy(inventory)&&!container.IsInUse()&&view.GetZDO().GetInt(ZDOVars.s_inUse)==0)R.Call(container,"Load");
-   return Stockroom.Preview(container);
+   if(revision!=StorageIndex.Revision){revision=StorageIndex.Revision;rowsDirty=true;}
   }
   internal static List<Stock> Stock(Player actor,IEnumerable<Need> requirements){
    var needs=requirements.ToList();var result=Stockroom.Snapshot(actor.GetInventory(),"player",needs,false);
-   if(actor==player&&core&&catalog.Ready)result.AddRange(catalog.ForItems(needs.Select(n=>n.Item)));
+   if(actor==player&&core)result.AddRange(StorageIndex.Query(core,actor.GetPlayerID(),needs));
    return result;
   }
-  internal static bool Ready(Player actor)=>actor==player&&core&&catalog.Ready;
+  internal static bool Ready(Player actor)=>actor==player&&core&&StorageIndex.Ready(core);
   internal static void Fresh(string key,List<Stock> items){
-   if(!core)return;
-   int revision=catalog.Revision;catalog.Replace(key,items.Select(s=>s.Item),items);rowsDirty|=catalog.Revision!=revision;
+   StorageIndex.Fresh(key);rowsDirty=true;
   }
   internal static void RefreshRows(InventoryGui current){
    if(gui!=current||!player||Actions.Active!=null)return;

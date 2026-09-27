@@ -73,17 +73,21 @@ namespace RunicStorageNetwork {
   }
  }
  internal static class Stockroom {
-  sealed class Observation {internal byte[] Data;internal float Until;internal List<Stock> Items;}
+  sealed class Observation {internal byte[] Data;internal List<Stock> Items;}
   static readonly Dictionary<string,Observation> observed=new Dictionary<string,Observation>();
   internal static void ClearObservations(){observed.Clear();}
   internal static void Observe(string key,List<Stock> items){
-   var z=RemoteContext.Source(key);if(z==null)return;observed[key]=new Observation{Data=(byte[])(z.GetByteArray(ZDOVars.s_items)??Array.Empty<byte>()).Clone(),Until=Time.unscaledTime+10,Items=items};
+   var z=RemoteContext.Source(key);if(z==null)return;observed[key]=new Observation{Data=(byte[])(z.GetByteArray(ZDOVars.s_items)??Array.Empty<byte>()).Clone(),Items=items};
    foreach(var core in Core.Live)if(core)core.Invalidate();CraftOverview.Fresh(key,items);if(z.GetOwner()!=ZNet.GetUID())ZDOMan.instance.RequestZDO(z.m_uid);
   }
   internal static List<Stock> Preview(Container c){
    var z=R.View(c).GetZDO();string key=R.Key(z.m_uid);var items=Snapshot(c.GetInventory(),key,null,true);
+   if(R.View(c).IsOwner())return items;
    if(observed.TryGetValue(key,out var fresh)){
-    if(!fresh.Data.SequenceEqual(z.GetByteArray(ZDOVars.s_items)??Array.Empty<byte>())||Time.unscaledTime>=fresh.Until)observed.Remove(key);
+    // Elapsed time cannot make an older local inventory more authoritative.
+    // Replace these display counts on a new owner snapshot or synchronized data;
+    // payment always obtains fresh owner confirmation independently.
+    if(!fresh.Data.SequenceEqual(z.GetByteArray(ZDOVars.s_items)??Array.Empty<byte>()))observed.Remove(key);
     else {var names=new HashSet<string>(fresh.Items.Select(s=>s.Item));items.RemoveAll(s=>names.Contains(s.Item));items.AddRange(fresh.Items);}
    }
    return items;
@@ -108,7 +112,7 @@ namespace RunicStorageNetwork {
   }
   internal static List<Stock> Available(Player player,Core core,List<Need> needs){
    var all=Snapshot(player.GetInventory(),"player",needs,false);
-   if(core){var ids=new HashSet<string>(needs.Select(n=>n.Item));all.AddRange(core.Stock(player.GetPlayerID()).Where(s=>ids.Contains(s.Item)));}
+   if(core)all.AddRange(StorageIndex.Query(core,player.GetPlayerID(),needs));
    return all;
   }
   internal static bool Qualities(List<Need> needs,List<Stock> stock,bool craft){

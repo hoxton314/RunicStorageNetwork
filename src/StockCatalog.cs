@@ -3,6 +3,20 @@ using System.Collections.Generic;
 using System.Linq;
 
 namespace RunicStorageNetwork.Logic {
+ // A confirmed plan is a floor for the selected recipe's display, never an
+ // extra copy of inventory and never authority to skip the payment protocol.
+ internal static class ReservationStock {
+  internal static List<Stock> Merge(IEnumerable<Stock> current,IEnumerable<Debit> plan,IEnumerable<Need> needs){
+   var result=current.ToList();var names=new HashSet<string>(needs.Select(n=>n.Item),StringComparer.Ordinal);
+   foreach(var debit in plan.Where(d=>names.Contains(d.Item))){
+    int known=result.Where(s=>s.Source==debit.Source&&s.Item==debit.Item&&s.Quality==debit.Quality).Sum(s=>s.Amount);
+    if(known>=debit.Amount)continue;
+    result.RemoveAll(s=>s.Source==debit.Source&&s.Item==debit.Item&&s.Quality==debit.Quality);
+    result.Add(new Stock(debit.Source,debit.Item,debit.Quality,debit.Amount));
+   }
+   return result;
+  }
+ }
  // Read-only browsing snapshot. Recipe feasibility and payment reservations
  // never filter this catalogue; a missing ingredient cannot hide other stock.
  internal sealed class StockCatalog<T> {

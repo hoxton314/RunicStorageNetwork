@@ -27,7 +27,7 @@ public static partial class BuildAssets {
   Texture.streamingTextureForceLoadAll=true;
   if(!iconDonors) iconDonors=AssetBundle.LoadFromFile(@"E:\Steam\steamapps\common\Valheim\valheim_Data\StreamingAssets\SoftRef\Bundles\c4210710");
   Check(iconDonors,"Native icon material bundle unavailable");
-  if(model.name.StartsWith("RSN_RunicStorageTerminal",StringComparison.Ordinal)){
+  if(model.name.StartsWith("RSN_RunicStorageTerminal",StringComparison.Ordinal)||model.name.StartsWith("RSN_RunicCodex",StringComparison.Ordinal)){
    RunicStorageNetwork.TerminalMaterials.Apply(model,id=>iconDonors.LoadAsset<GameObject>("Assets/GameElements/Pieces/"+id+".prefab"));
    return;
   }
@@ -66,7 +66,7 @@ public static partial class BuildAssets {
   RunicStorageNetwork.TerminalMaterials.ReleasePreview(model);
   foreach(var r in model.GetComponentsInChildren<MeshRenderer>())if(r.sharedMaterial&&r.sharedMaterial.name.StartsWith("IconOnly_"))UnityEngine.Object.DestroyImmediate(r.sharedMaterial);
  }
- static void RenderIcon(GameObject model,Bounds b,string path,RenderingPath renderingPath=RenderingPath.Forward,int size=256,float framing=2.6f) {
+ static void RenderIcon(GameObject model,Bounds b,string path,RenderingPath renderingPath=RenderingPath.Forward,int size=256,float framing=2.6f,Vector3? direction=null) {
   var scene=EditorSceneManager.NewPreviewScene(); var copy=UnityEngine.Object.Instantiate(model);
   UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(copy,scene);
   ApplyIconMaterials(copy);
@@ -74,7 +74,7 @@ public static partial class BuildAssets {
   var camera=cameraObj.AddComponent<Camera>();camera.scene=scene;camera.clearFlags=CameraClearFlags.SolidColor;
   camera.renderingPath=renderingPath;
   camera.backgroundColor=Color.clear;camera.orthographic=true;camera.orthographicSize=framing*.88f;
-  camera.transform.position=b.center+new Vector3(5,2,-7);camera.transform.LookAt(b.center);camera.nearClipPlane=0.1f;camera.farClipPlane=50;
+  camera.transform.position=b.center+(direction??new Vector3(5,2,-7));camera.transform.LookAt(b.center);camera.nearClipPlane=0.1f;camera.farClipPlane=50;
   var lightObj=new GameObject("IconLight");UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(lightObj,scene);
   var light=lightObj.AddComponent<Light>();light.type=LightType.Directional;light.intensity=1.8f;light.color=new Color(1f,.92f,.82f);light.transform.rotation=Quaternion.Euler(45,15f,0);
   var fillObj=new GameObject("IconFill");UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(fillObj,scene);
@@ -95,7 +95,7 @@ public static partial class BuildAssets {
   RenderSettings.reflectionIntensity=.4f;
   // Supersample the final PNG: native point-filtered textures and normal-map
   // highlights otherwise alias into isolated white pixels at menu-icon scale.
-  int samples=size==256?3:1;int renderSize=size*samples;
+  int samples=size<=256?3:1;int renderSize=size*samples;
   var rt=new RenderTexture(renderSize,renderSize,24,RenderTextureFormat.ARGBHalf,RenderTextureReadWrite.Linear);var previous=RenderTexture.active;
   var tex=new Texture2D(renderSize,renderSize,TextureFormat.RGBAFloat,false,true);
   var maskTexture=new Texture2D(renderSize,renderSize,TextureFormat.RGBA32,false,true);

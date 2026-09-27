@@ -1,6 +1,6 @@
 # Building from source
 
-This repository contains the mod's C# source, isolated logic tests and DLL compilation script. The separate model-authoring projects and the full asset/release pipeline are not included. A source snapshot and Editor integration for the upcoming Storage Codex are available in `model-sources/terminal` and `tools/BuildTerminalAssets.cs`. Compiling the DLL does **not** create an installable mod package: the matching release's `Assets/rsn_core_windows` bundle is also required.
+This repository contains the mod's C# source, isolated logic tests and DLL compilation script. The separate model-authoring projects and the full asset/release pipeline are not included. Source snapshots and Editor integrations for the upcoming Storage Codex stand and closed Runic Codex item visual are available in `model-sources/terminal`, `model-sources/codex`, `tools/BuildTerminalAssets.cs` and `tools/BuildCodexAssets.cs`. Compiling the DLL does **not** create an installable mod package: the matching release's `Assets/rsn_core_windows` bundle is also required.
 
 `tools/BuildIcons.cs` and `tools/IconSilhouette.shader` preserve the approved icon-rendering recipe used by the separate Unity asset pipeline. They are Editor sources, not plugin sources or a standalone asset build; they require the author's asset project and local game materials. The mod icon uses the same render as the core's build-menu icon.
 

@@ -28,6 +28,8 @@
 !/tools/BuildTerminalEngraving.py
 !/tools/BuildSurfaceUv.cs
 !/tools/PreviewTerminal.cs
+!/tools/BuildCodexAssets.cs
+!/tools/PreviewCodex.cs
 !/tools/IconSilhouette.shader
 !/model-sources/
 /model-sources/*
@@ -37,6 +39,13 @@
 !/model-sources/terminal/materials.json
 !/model-sources/terminal/source.json
 !/model-sources/terminal/README.md
+!/model-sources/codex/
+/model-sources/codex/*
+!/model-sources/codex/RunicCodex.fbx
+!/model-sources/codex/materials.json
+!/model-sources/codex/source.json
+!/model-sources/codex/README.md
+!/model-sources/codex/icon.png
 !/.github/
 /.github/*
 !/.github/ISSUE_TEMPLATE/

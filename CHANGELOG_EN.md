@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.4
+
+- Fixed clipped borders on the outer item slots in network storage.
+
 ## 0.7.3
 
 - Replaced white item-slot backgrounds in network storage with subtle translucent backgrounds and borders.

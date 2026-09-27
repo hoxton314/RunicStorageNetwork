@@ -77,6 +77,10 @@ namespace RunicStorageNetwork {
    view.GetComponent<Image>().color=Color.clear;
    scroll=view.GetComponentInChildren<ScrollRect>(true);
    if(!scroll||!scroll.content||!scroll.viewport)throw new InvalidOperationException("Terminal scroll view is missing its ScrollRect, viewport or content");
+   // Clip to the viewport rectangle, not the transparent margins of a game sprite.
+   var spriteMask=scroll.viewport.GetComponent<Mask>();if(spriteMask){spriteMask.enabled=false;Destroy(spriteMask);}
+   var maskImage=scroll.viewport.GetComponent<Image>();if(maskImage)maskImage.enabled=false;
+   if(!scroll.viewport.GetComponent<RectMask2D>())scroll.viewport.gameObject.AddComponent<RectMask2D>();
    scroll.horizontal=false;scroll.vertical=true;scroll.movementType=ScrollRect.MovementType.Clamped;scroll.scrollSensitivity=TerminalGrid.Pitch;scroll.inertia=false;
    if(scroll.horizontalScrollbar){scroll.horizontalScrollbar.gameObject.SetActive(false);scroll.horizontalScrollbar=null;}
    scroll.verticalScrollbarVisibility=ScrollRect.ScrollbarVisibility.Permanent;
@@ -143,7 +147,7 @@ namespace RunicStorageNetwork {
    for(int i=0;i<slots.Count;i++){
     var slot=slots[i];int index=first+i;bool filled=index<filtered.Count;bool visible=index<Math.Max(TerminalGrid.Columns*TerminalGrid.VisibleRows,filtered.Count);slot.Object.SetActive(visible);if(!visible)continue;
     var next=filled?filtered[index]:null;bool changed=slot.Entry?.Key!=next?.Key;
-    slot.Entry=next;slot.Rect.anchoredPosition=new Vector2((index%TerminalGrid.Columns)*TerminalGrid.Pitch+TerminalGrid.Cell/2,-(index/TerminalGrid.Columns)*TerminalGrid.Pitch-TerminalGrid.Cell/2);
+    slot.Entry=next;slot.Rect.anchoredPosition=new Vector2(TerminalGrid.Padding+(index%TerminalGrid.Columns)*TerminalGrid.Pitch+TerminalGrid.Cell/2,-TerminalGrid.Padding-(index/TerminalGrid.Columns)*TerminalGrid.Pitch-TerminalGrid.Cell/2);
     slot.Icon.enabled=filled;slot.Button.interactable=filled;
     if(filled)slot.Icon.sprite=slot.Entry.Item.m_itemData.GetIcon();
     slot.Count.text=filled?slot.Entry.Count.ToString("N0"):"";slot.Quality.text=filled&&slot.Entry.Quality>1?"★ "+slot.Entry.Quality:"";

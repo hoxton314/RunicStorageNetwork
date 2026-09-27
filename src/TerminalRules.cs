@@ -5,9 +5,9 @@ using System.Linq;
 
 namespace RunicStorageNetwork.Logic {
  internal static class TerminalGrid {
-  internal const int Columns=7,VisibleRows=4,Cell=84,Gap=8,Pitch=Cell+Gap;
-  internal const int Width=Columns*Pitch-Gap,Viewport=VisibleRows*Pitch-Gap;
-  internal static float Height(int count)=>Math.Max(Viewport,((Math.Max(0,count)+Columns-1)/Columns)*Pitch-Gap);
+  internal const int Columns=7,VisibleRows=4,Cell=84,Gap=8,Padding=4,Pitch=Cell+Gap;
+  internal const int Width=Columns*Pitch-Gap+2*Padding,Viewport=VisibleRows*Pitch-Gap+2*Padding;
+  internal static float Height(int count)=>Math.Max(Viewport,((Math.Max(0,count)+Columns-1)/Columns)*Pitch-Gap+2*Padding);
   internal static float ClampOffset(float offset,int count)=>Math.Max(0,Math.Min(offset,Height(count)-Viewport));
   internal static int FirstIndex(float offset,int count)=>(int)(ClampOffset(offset,count)/Pitch)*Columns;
   internal static float PreserveOffset(IReadOnlyList<string> before,IReadOnlyList<string> after,float offset){

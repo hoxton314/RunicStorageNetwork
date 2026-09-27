@@ -11,29 +11,29 @@ namespace RunicStorageNetwork {
  // this same view after resolving its network access point.
  public sealed class NetworkTerminal:MonoBehaviour {
   sealed class Entry {internal string Id,Name;internal int Quality,Count;internal ItemDrop Item;internal string Key=>Id+"/"+Quality;}
-  sealed class Row {internal GameObject Object;internal RectTransform Rect;internal Image Icon;internal Text Name,Count;internal Button Button;internal Entry Entry;}
+  sealed class Slot {internal GameObject Object;internal RectTransform Rect;internal Image Icon,Selection;internal Text Count,Quality;internal Button Button;internal UITooltip Tooltip;internal Entry Entry;}
   static NetworkTerminal instance;
   Core core;Player player;GameObject panel;bool blocked;
-  InputField search,quantity;Text heading,network,detail,available,carried,status,empty,qualityLabel;Image selectedIcon;Button take;
-  ScrollRect scroll;RectTransform content;readonly List<Row> rows=new List<Row>();
+  InputField search,quantity;Text heading,detail,available,carried,status,empty,qualityLabel;Image selectedIcon;Button take,minus,plus,stack;
+  ScrollRect scroll;RectTransform content;readonly List<Slot> slots=new List<Slot>();
   List<Entry> entries=new List<Entry>(),filtered=new List<Entry>();Entry selected;
-  float nextRefresh,statusUntil;string query="",selectedKey;int visibleStart=-1;bool dirtyRows;
+  float nextRefresh,statusUntil;string query="",selectedKey;int visibleStart=-1;bool dirtySlots;
   static readonly Vector2 Center=new Vector2(.5f,.5f);
-  static readonly Color Gold=new Color(1f,.79f,.42f),Muted=new Color(.78f,.75f,.67f);
-  const float RowHeight=52;
+  static readonly Color Gold=NetworkUiStyle.Gold,Muted=new Color(.78f,.75f,.67f),Bronze=NetworkUiStyle.Bronze;
   void Awake(){instance=this;}
   internal static bool Showing(Core value)=>instance&&instance.panel&&instance.panel.activeSelf&&instance.core==value;
   internal static bool Open(Core value,Player actor){
    if(!instance||!TerminalTransfer.CanUse(value,actor)||TerminalTransfer.Busy||Actions.Waiting!=null||CraftPreparation.HasReservation||!GUIManager.CustomGUIFront)return false;
    Close();if(InventoryGui.IsVisible())InventoryGui.instance.Hide();
    instance.core=value;instance.player=actor;
-   try{instance.Create();StorageIndex.Reconcile(value);instance.Refresh();GUIManager.BlockInput(true);instance.blocked=true;return true;}
+   try{instance.Create();StorageIndex.Reconcile(value);instance.Refresh();instance.RenderSlots();instance.UpdateDetail();GUIManager.BlockInput(true);instance.blocked=true;return true;}
    catch(Exception e){Plugin.Error("terminal UI",e);Close();return false;}
   }
   internal static void Close(){
    if(!instance)return;TerminalTransfer.Cancel();
    if(instance.blocked){GUIManager.BlockInput(false);instance.blocked=false;}
-   if(instance.panel)Destroy(instance.panel);instance.panel=null;instance.rows.Clear();instance.entries.Clear();instance.filtered.Clear();instance.selected=null;instance.selectedKey=null;instance.core=null;instance.player=null;instance.visibleStart=-1;instance.statusUntil=0;
+   if(instance.panel){UITooltip.HideTooltip();instance.panel.SetActive(false);Destroy(instance.panel);}
+   instance.panel=null;instance.slots.Clear();instance.entries.Clear();instance.filtered.Clear();instance.selected=null;instance.selectedKey=null;instance.core=null;instance.player=null;instance.visibleStart=-1;instance.statusUntil=0;
   }
   void OnDestroy(){if(instance==this){Close();instance=null;}}
   void Update(){
@@ -41,9 +41,9 @@ namespace RunicStorageNetwork {
    if(!TerminalTransfer.CanUse(core,player)||ZInput.GetKeyDown(KeyCode.Escape)||ZInput.GetButtonDown("JoyButtonB")){Close();return;}
    try{
     var parent=panel.transform.parent as RectTransform;
-    if(parent){float scale=Mathf.Min(1f,parent.rect.width/1080f,parent.rect.height/720f);panel.transform.localScale=Vector3.one*Mathf.Max(.4f,scale);}
+    if(parent){float scale=Mathf.Min(1f,parent.rect.width/1120f,parent.rect.height/680f);panel.transform.localScale=Vector3.one*Mathf.Max(.25f,scale);}
     if(Time.unscaledTime>=nextRefresh){nextRefresh=Time.unscaledTime+1;Refresh();}
-    RenderRows();UpdateDetail();
+    RenderSlots();UpdateDetail();
    }catch(Exception e){Plugin.Error("terminal update",e);Close();}
   }
   static string T(string key,params object[] args)=>RsnLocalization.Text(key,args);
@@ -54,71 +54,109 @@ namespace RunicStorageNetwork {
   Button Button(string text,Transform parent,float x,float y,float width,float height,Action click){
    var go=GUIManager.Instance.CreateButton(text,parent,Center,Center,new Vector2(x,y),width,height);var button=go.GetComponent<Button>();button.onClick.AddListener(()=>click());return button;
   }
-  static Image Icon(Transform parent,float x,float y,float size){
-   var go=new GameObject("ItemIcon",typeof(RectTransform),typeof(Image));go.transform.SetParent(parent,false);var rect=(RectTransform)go.transform;rect.anchorMin=rect.anchorMax=Center;rect.anchoredPosition=new Vector2(x,y);rect.sizeDelta=new Vector2(size,size);
-   var image=go.GetComponent<Image>();image.preserveAspect=true;image.raycastTarget=false;return image;
+  static Image Picture(string name,Transform parent,float x,float y,float width,float height){
+   var go=new GameObject(name,typeof(RectTransform),typeof(Image));go.transform.SetParent(parent,false);var rect=(RectTransform)go.transform;rect.anchorMin=rect.anchorMax=Center;rect.anchoredPosition=new Vector2(x,y);rect.sizeDelta=new Vector2(width,height);
+   var image=go.GetComponent<Image>();image.raycastTarget=false;return image;
+  }
+  static Image Icon(Transform parent,float x,float y,float size){var image=Picture("ItemIcon",parent,x,y,size,size);image.preserveAspect=true;return image;}
+  static void Line(Transform parent,float x,float y,float width,float height,Color color){Picture("Divider",parent,x,y,width,height).color=color;}
+  static void Border(Transform parent,float width,float height,Color color){
+   Line(parent,0,height/2,width,1,color);Line(parent,0,-height/2,width,1,color);Line(parent,-width/2,0,1,height,color);Line(parent,width/2,0,1,height,color);
   }
   void Create(){
-   var ui=GUIManager.Instance;panel=ui.CreateWoodpanel(GUIManager.CustomGUIFront.transform,Center,Center,Vector2.zero,1040,680,false);panel.name="RSN_NetworkTerminal";
-   heading=Label(T("terminal_title"),panel.transform,0,285,850,55,34,true);heading.alignment=TextAnchor.MiddleCenter;
-   network=Label("",panel.transform,0,243,900,30,20);network.alignment=TextAnchor.MiddleCenter;
-   Button("×",panel.transform,470,292,42,42,Close);
-   search=ui.CreateInputField(panel.transform,Center,Center,new Vector2(-205,189),InputField.ContentType.Standard,T("terminal_search"),20,550,42).GetComponent<InputField>();search.characterLimit=80;
-   search.onValueChanged.AddListener(value=>{query=value;Filter(true);});
-   Label(T("terminal_resource"),panel.transform,-210,146,540,28,18).color=Muted;
-   var countHeader=Label(T("terminal_in_network"),panel.transform,-210,146,540,28,18);countHeader.alignment=TextAnchor.MiddleRight;countHeader.color=Muted;
-   var view=ui.CreateScrollView(panel.transform,false,true,10,2,ColorBlock.defaultColorBlock,new Color(0,0,0,.12f),568,388);
-   var rect=view.GetComponent<RectTransform>();rect.anchorMin=rect.anchorMax=Center;rect.anchoredPosition=new Vector2(-202,-65);rect.sizeDelta=new Vector2(568,388);
-   scroll=view.GetComponent<ScrollRect>();scroll.horizontal=false;scroll.vertical=true;scroll.movementType=ScrollRect.MovementType.Clamped;scroll.scrollSensitivity=30;
-   content=scroll.content;
-   // Own the content geometry; retain the game's styled viewport and scrollbar.
-   foreach(var layout in content.GetComponents<LayoutGroup>())Destroy(layout);
-   foreach(var fitter in content.GetComponents<ContentSizeFitter>())Destroy(fitter);
-   content.anchorMin=new Vector2(0,1);content.anchorMax=new Vector2(1,1);content.pivot=new Vector2(.5f,1);content.anchoredPosition=Vector2.zero;
-   for(int i=0;i<10;i++){
-    var row=new Row();row.Button=Button("",content,0,0,540,48,()=>Select(row.Entry));row.Object=row.Button.gameObject;row.Rect=row.Object.GetComponent<RectTransform>();row.Rect.anchorMin=row.Rect.anchorMax=new Vector2(.5f,1);
-    row.Icon=Icon(row.Object.transform,-234,0,40);row.Name=Label("",row.Object.transform,-15,0,350,42,20);row.Count=Label("",row.Object.transform,210,0,95,42,20);row.Count.alignment=TextAnchor.MiddleRight;rows.Add(row);
+   var ui=GUIManager.Instance;
+   panel=NetworkUiStyle.Panel(GUIManager.CustomGUIFront.transform,1080,640);panel.name="RSN_NetworkTerminal";
+   heading=Label(T("terminal_title"),panel.transform,0,265,900,48,32,true);heading.alignment=TextAnchor.MiddleCenter;heading.resizeTextForBestFit=true;heading.resizeTextMinSize=22;heading.resizeTextMaxSize=32;
+   Button("×",panel.transform,502,269,36,36,Close);
+   Line(panel.transform,0,229,1016,1,Bronze);Line(panel.transform,177,-22,1,458,Bronze);
+   search=ui.CreateInputField(panel.transform,Center,Center,new Vector2(-190,185),InputField.ContentType.Standard,T("terminal_search"),22,TerminalGrid.Width,44).GetComponent<InputField>();search.characterLimit=80;
+   // Unity's standard hierarchy avoids nested canvases inside the masked viewport.
+   // Sprites come from Jotunn's native game resource set.
+   var view=DefaultControls.CreateScrollView(ui.ValheimControlResources);view.name="Resources";view.transform.SetParent(panel.transform,false);
+   var rect=view.GetComponent<RectTransform>();rect.anchorMin=rect.anchorMax=Center;rect.anchoredPosition=new Vector2(-180,-42);rect.sizeDelta=new Vector2(TerminalGrid.Width+20,TerminalGrid.Viewport);
+   view.GetComponent<Image>().color=Color.clear;
+   scroll=view.GetComponentInChildren<ScrollRect>(true);
+   if(!scroll||!scroll.content||!scroll.viewport)throw new InvalidOperationException("Terminal scroll view is missing its ScrollRect, viewport or content");
+   scroll.horizontal=false;scroll.vertical=true;scroll.movementType=ScrollRect.MovementType.Clamped;scroll.scrollSensitivity=TerminalGrid.Pitch;scroll.inertia=false;
+   if(scroll.horizontalScrollbar){scroll.horizontalScrollbar.gameObject.SetActive(false);scroll.horizontalScrollbar=null;}
+   scroll.verticalScrollbarVisibility=ScrollRect.ScrollbarVisibility.Permanent;
+   scroll.viewport.anchorMin=Vector2.zero;scroll.viewport.anchorMax=Vector2.one;scroll.viewport.offsetMin=Vector2.zero;scroll.viewport.offsetMax=new Vector2(-20,0);
+   if(scroll.verticalScrollbar){
+    var bar=scroll.verticalScrollbar;var barRect=bar.GetComponent<RectTransform>();barRect.anchorMin=new Vector2(1,0);barRect.anchorMax=Vector2.one;barRect.pivot=Vector2.one;barRect.offsetMin=new Vector2(-12,0);barRect.offsetMax=Vector2.zero;
+    var background=bar.GetComponent<Image>();if(background)background.color=new Color(.09f,.08f,.06f,1);
+    bar.targetGraphic.color=new Color(.62f,.55f,.42f,1);var colors=bar.colors;colors.normalColor=Color.white;colors.highlightedColor=new Color(1.2f,1.15f,1,1);bar.colors=colors;
    }
-   empty=Label("",panel.transform,-205,-60,510,100,22);empty.alignment=TextAnchor.MiddleCenter;empty.color=Muted;
-   selectedIcon=Icon(panel.transform,290,115,112);selectedIcon.enabled=false;
-   detail=Label(T("terminal_select"),panel.transform,290,25,340,65,28,true);detail.alignment=TextAnchor.MiddleCenter;
-   qualityLabel=Label("",panel.transform,290,-20,340,26,18);qualityLabel.alignment=TextAnchor.MiddleCenter;
-   available=Label("",panel.transform,290,-56,340,28,20);available.alignment=TextAnchor.MiddleCenter;
-   carried=Label("",panel.transform,290,-86,340,28,20);carried.alignment=TextAnchor.MiddleCenter;
-   var amountTitle=Label(T("terminal_quantity"),panel.transform,290,-130,340,28,20);amountTitle.alignment=TextAnchor.MiddleCenter;
-   quantity=ui.CreateInputField(panel.transform,Center,Center,new Vector2(290,-169),InputField.ContentType.IntegerNumber,"1",22,160,42).GetComponent<InputField>();quantity.characterLimit=5;quantity.text="1";
-   Button("−",panel.transform,178,-169,48,42,()=>ChangeAmount(-1));Button("+",panel.transform,402,-169,48,42,()=>ChangeAmount(1));
-   Button("1",panel.transform,209,-215,66,34,()=>SetAmount(1));Button("10",panel.transform,283,-215,66,34,()=>SetAmount(10));Button(T("terminal_stack"),panel.transform,375,-215,100,34,()=>SetAmount(selected?.Item.m_itemData.m_shared.m_maxStackSize??1));
-   take=Button(T("terminal_take",1),panel.transform,290,-270,310,48,Take);
-   status=Label("",panel.transform,-5,-310,960,24,17);status.alignment=TextAnchor.MiddleCenter;status.color=Muted;
-   query="";nextRefresh=0;dirtyRows=true;
+   content=scroll.content;content.anchorMin=new Vector2(0,1);content.anchorMax=new Vector2(0,1);content.pivot=new Vector2(0,1);content.anchoredPosition=Vector2.zero;content.sizeDelta=new Vector2(TerminalGrid.Width,TerminalGrid.Viewport);
+   var grid=InventoryGui.instance?InventoryGui.instance.m_playerGrid:null;
+   var nativeSlot=grid&&grid.m_elementPrefab?grid.m_elementPrefab.GetComponent<InventoryElement>():null;
+   // One spare row allows smooth clipping while keeping the number of objects bounded.
+   for(int i=0;i<TerminalGrid.Columns*(TerminalGrid.VisibleRows+1);i++){
+    var slot=new Slot();slot.Button=Button("",content,0,0,TerminalGrid.Cell,TerminalGrid.Cell,()=>Select(slot.Entry));slot.Object=slot.Button.gameObject;slot.Object.name="ResourceSlot";slot.Rect=slot.Object.GetComponent<RectTransform>();slot.Rect.anchorMin=slot.Rect.anchorMax=new Vector2(0,1);
+    var background=slot.Button.image;
+    // The native button's image is a hit target, not the inventory slot backdrop.
+    // Own the backdrop and keep its alpha on the Image so every button state stays translucent.
+    background.sprite=null;background.overrideSprite=null;background.material=null;background.type=Image.Type.Simple;background.color=new Color(.10f,.085f,.065f,.32f);
+    slot.Button.targetGraphic=background;slot.Button.transition=Selectable.Transition.ColorTint;
+    var colors=ColorBlock.defaultColorBlock;colors.normalColor=Color.white;colors.highlightedColor=new Color(1.5f,1.35f,1.1f,1);colors.pressedColor=new Color(.7f,.7f,.7f,1);colors.selectedColor=Color.white;colors.disabledColor=Color.white;colors.colorMultiplier=1;colors.fadeDuration=.08f;slot.Button.colors=colors;
+    Border(slot.Object.transform,82,82,new Color(Bronze.r,Bronze.g,Bronze.b,.35f));
+    slot.Icon=Icon(slot.Object.transform,0,3,64);
+    slot.Count=Label("",slot.Object.transform,-3,-29,74,24,18);slot.Count.alignment=TextAnchor.MiddleRight;slot.Count.resizeTextForBestFit=true;slot.Count.resizeTextMinSize=12;slot.Count.resizeTextMaxSize=18;
+    slot.Quality=Label("",slot.Object.transform,-3,28,72,22,16);slot.Quality.alignment=TextAnchor.MiddleRight;slot.Quality.color=Gold;
+    slot.Selection=Picture("Selection",slot.Object.transform,0,0,80,80);slot.Selection.color=Color.clear;Border(slot.Selection.transform,80,80,Gold);slot.Selection.gameObject.SetActive(false);
+    if(nativeSlot&&nativeSlot.m_tooltip&&nativeSlot.m_tooltip.m_tooltipPrefab){slot.Tooltip=slot.Object.AddComponent<UITooltip>();slot.Tooltip.m_tooltipPrefab=nativeSlot.m_tooltip.m_tooltipPrefab;}
+    slots.Add(slot);
+   }
+   empty=Label("",panel.transform,-190,-42,560,90,22);empty.alignment=TextAnchor.MiddleCenter;empty.color=Muted;
+   selectedIcon=Icon(panel.transform,345,136,104);selectedIcon.enabled=false;
+   detail=Label(T("terminal_select"),panel.transform,345,52,282,62,27,true);detail.alignment=TextAnchor.MiddleCenter;detail.resizeTextForBestFit=true;detail.resizeTextMinSize=18;detail.resizeTextMaxSize=27;
+   qualityLabel=Label("",panel.transform,345,8,280,24,18);qualityLabel.alignment=TextAnchor.MiddleCenter;qualityLabel.color=Muted;
+   available=Label("",panel.transform,345,-36,280,28,21);available.alignment=TextAnchor.MiddleCenter;
+   carried=Label("",panel.transform,345,-66,280,28,21);carried.alignment=TextAnchor.MiddleCenter;
+   Line(panel.transform,345,-97,262,1,Bronze);
+   var amountTitle=Label(T("terminal_quantity"),panel.transform,345,-124,280,26,20);amountTitle.alignment=TextAnchor.MiddleCenter;
+   quantity=ui.CreateInputField(panel.transform,Center,Center,new Vector2(345,-164),InputField.ContentType.IntegerNumber,"1",24,120,44).GetComponent<InputField>();quantity.characterLimit=5;quantity.text="1";quantity.textComponent.alignment=TextAnchor.MiddleCenter;
+   minus=Button("−",panel.transform,255,-164,44,44,()=>ChangeAmount(-1));plus=Button("+",panel.transform,435,-164,44,44,()=>ChangeAmount(1));
+   stack=Button(T("terminal_stack"),panel.transform,345,-207,116,32,()=>SetAmount(selected?.Item.m_itemData.m_shared.m_maxStackSize??1));
+   take=Button(T("terminal_take"),panel.transform,345,-255,282,48,Take);
+   status=Label("",panel.transform,0,-296,980,24,17);status.alignment=TextAnchor.MiddleCenter;status.color=Muted;
+   query="";search.onValueChanged.AddListener(value=>{query=value;Filter(true);});nextRefresh=0;dirtySlots=true;
   }
   void Refresh(){
    if(!core||!player)return;
-   string name=NetworkName.For(core.GetComponent<NetworkMember>());network.text=name.Length>0?T("terminal_network_name",name):T("terminal_unnamed");
+   string name=NetworkName.For(core.GetComponent<NetworkMember>());heading.text=name.Length>0?name:T("terminal_title");
    entries=StorageIndex.Browse(core,player.GetPlayerID()).GroupBy(s=>(s.Item,s.Quality)).Select(g=>{
     var prefab=ZNetScene.instance.GetPrefab(g.Key.Item);var item=prefab?prefab.GetComponent<ItemDrop>():null;
     return item?new Entry{Id=g.Key.Item,Quality=g.Key.Quality,Count=(int)Math.Min(int.MaxValue,g.Sum(s=>(long)s.Amount)),Item=item,Name=Localization.instance.Localize(item.m_itemData.m_shared.m_name)}:null;
-   }).Where(e=>e!=null&&e.Count>0).OrderBy(e=>e.Name,StringComparer.CurrentCultureIgnoreCase).ThenBy(e=>e.Quality).ToList();
+   }).Where(e=>e!=null&&e.Count>0).OrderBy(e=>e.Name,StringComparer.CurrentCultureIgnoreCase).ThenBy(e=>e.Quality).ThenBy(e=>e.Id,StringComparer.Ordinal).ToList();
    if(selectedKey!=null){var found=entries.FirstOrDefault(e=>e.Key==selectedKey);if(found!=null)selected=found;else if(selected!=null)selected.Count=0;}
    Filter(false);
   }
   void Filter(bool reset){
-   filtered=entries.Where(e=>TerminalRules.Search(e.Name,query)).ToList();content.sizeDelta=new Vector2(0,Mathf.Max(388,filtered.Count*RowHeight));
-   if(reset)scroll.verticalNormalizedPosition=1;dirtyRows=true;
+   var previous=filtered;filtered=entries.Where(e=>TerminalRules.Search(e.Name,query)).ToList();
+   float offset=reset?0:TerminalGrid.PreserveOffset(previous.Select(e=>e.Key).ToArray(),filtered.Select(e=>e.Key).ToArray(),content.anchoredPosition.y);
+   scroll.StopMovement();content.sizeDelta=new Vector2(TerminalGrid.Width,TerminalGrid.Height(filtered.Count));content.anchoredPosition=new Vector2(0,offset);dirtySlots=true;
    empty.text=filtered.Count==0?T(entries.Count==0?"terminal_empty":"terminal_no_results"):"";
   }
-  void RenderRows(){
-   int first=Mathf.Clamp((int)(content.anchoredPosition.y/RowHeight),0,Mathf.Max(0,filtered.Count-1));
-   if(first==visibleStart&&!dirtyRows)return;visibleStart=first;dirtyRows=false;
-   for(int i=0;i<rows.Count;i++){
-    var row=rows[i];int index=first+i;row.Object.SetActive(index<filtered.Count);if(index>=filtered.Count)continue;
-    row.Entry=filtered[index];row.Rect.anchoredPosition=new Vector2(-6,-index*RowHeight-RowHeight/2);
-    row.Icon.sprite=row.Entry.Item.m_itemData.GetIcon();row.Name.text=row.Entry.Name+(row.Entry.Quality>1?" · "+T("terminal_quality",row.Entry.Quality):"");row.Count.text=row.Entry.Count.ToString("N0");
-    var colors=row.Button.colors;colors.normalColor=row.Entry.Key==selectedKey?new Color(1,.78f,.42f):Color.white;row.Button.colors=colors;
+  void RenderSlots(){
+   int first=TerminalGrid.FirstIndex(content.anchoredPosition.y,filtered.Count);
+   if(first==visibleStart&&!dirtySlots)return;visibleStart=first;dirtySlots=false;
+   for(int i=0;i<slots.Count;i++){
+    var slot=slots[i];int index=first+i;bool filled=index<filtered.Count;bool visible=index<Math.Max(TerminalGrid.Columns*TerminalGrid.VisibleRows,filtered.Count);slot.Object.SetActive(visible);if(!visible)continue;
+    var next=filled?filtered[index]:null;bool changed=slot.Entry?.Key!=next?.Key;
+    slot.Entry=next;slot.Rect.anchoredPosition=new Vector2((index%TerminalGrid.Columns)*TerminalGrid.Pitch+TerminalGrid.Cell/2,-(index/TerminalGrid.Columns)*TerminalGrid.Pitch-TerminalGrid.Cell/2);
+    slot.Icon.enabled=filled;slot.Button.interactable=filled;
+    if(filled)slot.Icon.sprite=slot.Entry.Item.m_itemData.GetIcon();
+    slot.Count.text=filled?slot.Entry.Count.ToString("N0"):"";slot.Quality.text=filled&&slot.Entry.Quality>1?"★ "+slot.Entry.Quality:"";
+    slot.Selection.gameObject.SetActive(filled&&slot.Entry.Key==selectedKey);
+    if(slot.Tooltip){
+     // Recycling a hovered slot must not keep the previous item's tooltip alive.
+     if(changed){slot.Tooltip.enabled=false;slot.Tooltip.enabled=filled;}
+     slot.Tooltip.m_topic=filled?slot.Entry.Name:"";
+     slot.Tooltip.m_text=filled?Localization.instance.Localize(slot.Entry.Item.m_itemData.m_shared.m_description)+(slot.Entry.Quality>1?"\n"+T("terminal_quality",slot.Entry.Quality):""):"";
+    }
    }
   }
-  void Select(Entry entry){if(entry==null||TerminalTransfer.Busy)return;selected=entry;selectedKey=entry.Key;SetAmount(1);dirtyRows=true;UpdateDetail();}
+  void Select(Entry entry){if(entry==null||TerminalTransfer.Busy)return;selected=entry;selectedKey=entry.Key;SetAmount(1);dirtySlots=true;UpdateDetail();}
   void SetAmount(int value){quantity.text=Mathf.Clamp(value,1,Math.Max(1,Math.Min(selected?.Count??1,TerminalRules.MaxAmount))).ToString();}
   void ChangeAmount(int delta){int.TryParse(quantity.text,out int value);SetAmount(value+delta);}
   void UpdateDetail(){
@@ -127,9 +165,10 @@ namespace RunicStorageNetwork {
    available.text=chosen?T("terminal_available",selected.Count.ToString("N0")):"";
    int held=chosen?player.GetInventory().GetAllItems().Where(i=>i.m_dropPrefab&&i.m_dropPrefab.name==selected.Id&&i.m_quality==selected.Quality).Sum(i=>i.m_stack):0;
    carried.text=chosen?T("terminal_carried",held.ToString("N0")):"";
-   bool valid=TerminalRules.Quantity(quantity.text,selected?.Count??0,out int amount);take.interactable=chosen&&valid&&!TerminalTransfer.Busy;quantity.interactable=!TerminalTransfer.Busy;search.interactable=!TerminalTransfer.Busy;
-   var label=take.GetComponentInChildren<Text>();if(label)label.text=TerminalTransfer.Busy?T("terminal_pending"):T("terminal_take",valid?amount:0);
-   if(Time.unscaledTime>=statusUntil)status.text=TerminalTransfer.Busy?T("terminal_pending"):T("terminal_close");
+   bool valid=TerminalRules.Quantity(quantity.text,selected?.Count??0,out int amount);bool editable=chosen&&selected.Count>0&&!TerminalTransfer.Busy;
+   take.interactable=editable&&valid;quantity.interactable=editable;minus.interactable=editable;plus.interactable=editable;stack.interactable=editable;search.interactable=!TerminalTransfer.Busy;
+   var label=take.GetComponentInChildren<Text>();if(label)label.text=T(TerminalTransfer.Busy?"terminal_pending":"terminal_take");
+   if(Time.unscaledTime>=statusUntil)status.text=T(TerminalTransfer.Busy?"terminal_pending":"terminal_close");
   }
   void Take(){
    if(selected==null||!TerminalRules.Quantity(quantity.text,selected.Count,out int amount)||TerminalTransfer.Busy)return;

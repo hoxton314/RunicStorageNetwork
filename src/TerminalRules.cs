@@ -4,6 +4,20 @@ using System.Globalization;
 using System.Linq;
 
 namespace RunicStorageNetwork.Logic {
+ internal static class TerminalGrid {
+  internal const int Columns=7,VisibleRows=4,Cell=84,Gap=8,Pitch=Cell+Gap;
+  internal const int Width=Columns*Pitch-Gap,Viewport=VisibleRows*Pitch-Gap;
+  internal static float Height(int count)=>Math.Max(Viewport,((Math.Max(0,count)+Columns-1)/Columns)*Pitch-Gap);
+  internal static float ClampOffset(float offset,int count)=>Math.Max(0,Math.Min(offset,Height(count)-Viewport));
+  internal static int FirstIndex(float offset,int count)=>(int)(ClampOffset(offset,count)/Pitch)*Columns;
+  internal static float PreserveOffset(IReadOnlyList<string> before,IReadOnlyList<string> after,float offset){
+   int first=FirstIndex(offset,before.Count);
+   if(first<before.Count){
+    for(int i=0;i<after.Count;i++)if(after[i]==before[first])return ClampOffset((i/Columns)*Pitch+offset%Pitch,after.Count);
+   }
+   return ClampOffset(offset,after.Count);
+  }
+ }
  internal static class TerminalRules {
   internal const int MaxAmount=10000,MaxParcels=256;
   internal static bool Quantity(string text,int available,out int value)=>int.TryParse(text,NumberStyles.None,CultureInfo.InvariantCulture,out value)&&value>0&&value<=Math.Min(MaxAmount,available);

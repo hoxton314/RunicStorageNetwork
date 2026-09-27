@@ -30,7 +30,7 @@ namespace RunicStorageNetwork {
    Add("network_rename","Name network","Назвать сеть");
    Add("network_name_input","Network name (optional)","Название сети (необязательно)");
    Add("terminal_open","Open network storage","Открыть хранилище сети");
-   Add("terminal_title","NETWORK STORAGE","ХРАНИЛИЩЕ СЕТИ");
+   Add("terminal_title","STORAGE","ХРАНИЛИЩЕ");
    Add("terminal_search","Search","Поиск");
    Add("terminal_resource","Resource","Ресурс");
    Add("terminal_in_network","In network","В сети");
@@ -42,7 +42,7 @@ namespace RunicStorageNetwork {
    Add("terminal_available","In network: {0}","В сети: {0}");
    Add("terminal_carried","In inventory: {0}","В инвентаре: {0}");
    Add("terminal_stack","Stack","Стак");
-   Add("terminal_take","Take {0}","Забрать {0}");
+   Add("terminal_take","Take","Забрать");
    Add("terminal_close","Esc — close","Esc — закрыть");
    Add("terminal_empty","No resources available","Нет доступных ресурсов");
    Add("terminal_no_results","Nothing found","Ничего не найдено");

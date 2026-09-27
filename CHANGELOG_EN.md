@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.7.3
+
+- Replaced white item-slot backgrounds in network storage with subtle translucent backgrounds and borders.
+- Updated the core's network-renaming dialog to match the storage window.
+
+## 0.7.2
+
+- Redesigned network storage with a dark background, an item grid and a compact withdrawal panel.
+- Hover over a resource to see its name and description. Item quality is marked in the grid.
+- Stock updates preserve your selection and keep the resource you are viewing in place where possible.
+
+## 0.7.1
+
+- Fixed the network storage window failing to open when interacting with a core.
+
 ## 0.7.0
 
 - Added a network storage window on the core with search, item counts and quantity selection.

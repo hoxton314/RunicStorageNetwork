@@ -11,6 +11,7 @@ using RunicStorageNetwork.Logic;
 namespace RunicStorageNetwork {
  internal static class Patches {
   internal static void Install(Harmony h){
+   Patch(h,typeof(TextInput),"RequestText",new[]{typeof(TextReceiver),typeof(string),typeof(int)},nameof(TextPromptBefore),nameof(TextPromptAfter));
    Patch(h,typeof(Container),"GetHoverText",Type.EmptyTypes,null,nameof(ContainerInfo));
    Patch(h,typeof(Hud),"SetupPieceInfo",new[]{typeof(Piece)},null,nameof(RelayPlacementInfo));
    Patch(h,typeof(InventoryGui),"DoCrafting",new[]{typeof(Player)},nameof(Craft),null,nameof(CraftIL));
@@ -41,6 +42,8 @@ namespace RunicStorageNetwork {
    h.Patch(target,prefix==null?null:new HarmonyMethod(typeof(Patches),prefix){priority=Priority.First},postfix==null?null:new HarmonyMethod(typeof(Patches),postfix),transpiler==null?null:new HarmonyMethod(typeof(Patches),transpiler));
    Plugin.Info("Patch OK: "+type.Name+"."+target);
   }
+  static void TextPromptBefore(TextInput __instance){NetworkRenameStyle.Reset(__instance);}
+  static void TextPromptAfter(TextInput __instance,TextReceiver __0){if(__0 is NetworkName)NetworkRenameStyle.Apply(__instance);}
   static void ContainerInfo(Container __instance,ref string __result){
    string text=ContainerHover.Text(__instance);if(text.Length>0)__result+="\n"+text;
   }

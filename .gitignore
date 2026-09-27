@@ -25,6 +25,7 @@
 !/tools/TestReleaseValidation.ps1
 !/tools/BuildIcons.cs
 !/tools/BuildTerminalAssets.cs
+!/tools/BuildTerminalEngraving.py
 !/tools/BuildSurfaceUv.cs
 !/tools/PreviewTerminal.cs
 !/tools/IconSilhouette.shader

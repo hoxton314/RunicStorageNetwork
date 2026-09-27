@@ -56,7 +56,12 @@ public static partial class BuildAssets {
   for(int i=0;i<indices.Length;i++)Check(dst[i]==vertices[indices[i]]&&ns[i]==normals[indices[i]],"Surface mapping changed geometry");
   Directory.CreateDirectory(Root+"/Meshes");string path=Root+"/Meshes/"+mesh.name+".asset";
   var saved=AssetDatabase.LoadAssetAtPath<Mesh>(path);
-  if(saved){EditorUtility.CopySerialized(mesh,saved);UnityEngine.Object.DestroyImmediate(mesh);}else{AssetDatabase.CreateAsset(mesh,path);saved=mesh;}
+  if(saved){
+   // Mesh setters invalidate the GPU buffers as well as the serialized asset.
+   saved.Clear();saved.vertices=mesh.vertices;saved.normals=mesh.normals;saved.uv=mesh.uv;saved.triangles=mesh.triangles;
+   saved.colors=mesh.colors;saved.tangents=mesh.tangents;saved.RecalculateBounds();EditorUtility.SetDirty(saved);
+   UnityEngine.Object.DestroyImmediate(mesh);
+  }else{AssetDatabase.CreateAsset(mesh,path);saved=mesh;}
   filter.sharedMesh=saved;
   Debug.Log("RSN_SURFACE_UV "+saved.name+" groups="+bounds.Count+" triangles="+indices.Length/3+"; positions/normals unchanged; tangents rebuilt");
  }

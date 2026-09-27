@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Added the Storage Codex as a decorative build piece.
+- Added the Storage Codex, a decorative book stand with a dark leather cover and a glowing rune carved into its stone pedestal.
 
 ## 0.7.5
 

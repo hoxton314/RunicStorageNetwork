@@ -9,6 +9,7 @@ namespace RunicStorageNetwork {
   static readonly string[] Plain={"RST_Silver","RST_Leather","RST_Parchment","RST_PageEdges","RST_Cloth","RST_Cloth_RedBorder","RST_BannerSymbol"};
   internal static void Apply(GameObject prefab,Func<string,GameObject> resolve){
    var pending=new List<KeyValuePair<MeshRenderer,Material>>();
+   var textures=new List<Texture2D>();
    try{
     foreach(var renderer in prefab.GetComponentsInChildren<MeshRenderer>(true)){
      var original=renderer.sharedMaterial;
@@ -35,19 +36,35 @@ namespace RunicStorageNetwork {
       // Preserve authored blue-grey cloth, red trim, leather, paper and silver.
       foreach(string property in mat.GetTexturePropertyNames())mat.SetTexture(property,null);
       mat.SetTexture("_MainTex",Texture2D.whiteTexture);
+      // Explicit masks avoid inheriting the donor's textured metal response.
+      bool metal=slot=="RST_Silver";
+      mat.SetTexture("_MetallicTex",metal?Texture2D.whiteTexture:Texture2D.blackTexture);
       mat.SetFloat("_BumpScale",0);mat.SetFloat("_Metallic",original.GetFloat("_Metallic"));
-      mat.SetFloat("_Glossiness",original.GetFloat("_Smoothness"));mat.SetFloat("_MetallicAlphaGloss",0);
+      mat.SetFloat("_Glossiness",original.GetFloat("_Smoothness"));mat.SetFloat("_MetallicAlphaGloss",metal?original.GetFloat("_Smoothness"):0);
       mat.SetVector("_Color",original.GetVector("_BaseLinear"));
+      if(metal)mat.SetVector("_MetalColor",original.GetVector("_BaseLinear"));
+      if(slot=="RST_Leather"){
+       // Dark brown leather keeps the cover and spine distinct from silver trim.
+       // Use albedo for the leather tone; _Color also serves placement/support tint.
+       var albedo=new Texture2D(1,1,TextureFormat.RGBA32,false,true){name=Prefix+slot+"_Albedo"};textures.Add(albedo);
+       albedo.SetPixel(0,0,new Color(.014f,.008f,.004f,1));albedo.Apply(false,true);mat.SetTexture("_MainTex",albedo);
+       mat.SetColor("_Color",Color.white);
+       mat.SetFloat("_Metallic",0);mat.SetFloat("_Glossiness",.1f);
+      }
       mat.SetColor("_EmissionColor",Color.clear);mat.SetColor("_Emissive",Color.clear);
      }
     }
-   }catch{foreach(var pair in pending)Destroy(pair.Value);throw;}
+   }catch{foreach(var pair in pending)Destroy(pair.Value);foreach(var texture in textures)Destroy(texture);throw;}
    foreach(var pair in pending)pair.Key.sharedMaterial=pair.Value;
   }
   internal static void ReleasePreview(GameObject model){
    foreach(var renderer in model.GetComponentsInChildren<MeshRenderer>(true))
-    if(renderer.sharedMaterial&&renderer.sharedMaterial.name.StartsWith(Prefix+"RST_",StringComparison.Ordinal))Destroy(renderer.sharedMaterial);
+    if(renderer.sharedMaterial&&renderer.sharedMaterial.name.StartsWith(Prefix+"RST_",StringComparison.Ordinal)){
+     var albedo=renderer.sharedMaterial.GetTexture("_MainTex");
+     if(albedo&&albedo.name.StartsWith(Prefix+"RST_",StringComparison.Ordinal))Destroy(albedo);
+     Destroy(renderer.sharedMaterial);
+    }
   }
-  static void Destroy(Material material){if(Application.isPlaying)UnityEngine.Object.Destroy(material);else UnityEngine.Object.DestroyImmediate(material);}
+  static void Destroy(UnityEngine.Object asset){if(Application.isPlaying)UnityEngine.Object.Destroy(asset);else UnityEngine.Object.DestroyImmediate(asset);}
  }
 }

@@ -17,20 +17,24 @@ public static partial class BuildAssets {
    TerminalView(model,output+"/01-overall.png",new Vector3(3,2.3f,-5),false);
    TerminalView(model,output+"/02-book.png",new Vector3(2,3.6f,-5),true);
    TerminalView(model,output+"/03-back.png",new Vector3(-3,2.3f,5),false);
+   TerminalView(model,output+"/04-pedestal-rune.png",new Vector3(1.7f,.9f,-4),false,true);
+   TerminalView(model,output+"/05-cover.png",new Vector3(4,1f,-3),true);
+   TerminalView(model,output+"/06-cover-material.png",new Vector3(3,2.3f,-5),true,false,true);
    Debug.Log("RSN_TERMINAL_PREVIEW_SUCCESS");EditorApplication.Exit(0);
   }catch(Exception e){Debug.LogException(e);EditorApplication.Exit(1);}
   finally{if(model)UnityEngine.Object.DestroyImmediate(model);}
  }
- static void TerminalView(GameObject model,string path,Vector3 direction,bool close){
+ static void TerminalView(GameObject model,string path,Vector3 direction,bool close,bool pedestal=false,bool coverOnly=false){
   var scene=EditorSceneManager.NewPreviewScene();var copy=UnityEngine.Object.Instantiate(model);
   UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(copy,scene);
   ApplyIconMaterials(copy);
   var renderers=copy.GetComponentsInChildren<MeshRenderer>();
-  var targets=close?renderers.Where(r=>r.name.Contains("Book")||r.name.Contains("Parchment")||r.name.Contains("Page")||r.name.Contains("Leather")||r.name.Contains("Silver")).ToArray():renderers;
+  if(coverOnly)foreach(var renderer in renderers)renderer.enabled=renderer.name=="RST_Leather"||renderer.name=="RST_Silver";
+  var targets=pedestal?renderers.Where(r=>r.name=="RST_BaseRune").ToArray():close?renderers.Where(r=>r.name.Contains("Book")||r.name.Contains("Parchment")||r.name.Contains("Page")||r.name.Contains("Leather")||r.name.Contains("Silver")).ToArray():renderers;
   var bounds=targets[0].bounds;foreach(var r in targets)bounds.Encapsulate(r.bounds);
   var cameraObj=new GameObject("TerminalPreviewCamera");UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(cameraObj,scene);
   var camera=cameraObj.AddComponent<Camera>();camera.scene=scene;camera.clearFlags=CameraClearFlags.SolidColor;
-  camera.backgroundColor=new Color(.19f,.215f,.23f,1);camera.orthographic=true;camera.orthographicSize=close?.64f:.99f;
+  camera.backgroundColor=new Color(.19f,.215f,.23f,1);camera.orthographic=true;camera.orthographicSize=pedestal?.26f:close?.64f:.99f;
   camera.transform.position=bounds.center+direction;camera.transform.LookAt(bounds.center);camera.nearClipPlane=.03f;camera.farClipPlane=50;camera.renderingPath=RenderingPath.Forward;
   var keyObj=new GameObject("Key");UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(keyObj,scene);
   var key=keyObj.AddComponent<Light>();key.type=LightType.Directional;key.intensity=1.8f;key.color=new Color(1,.92f,.82f);key.transform.rotation=Quaternion.Euler(45,15,0);

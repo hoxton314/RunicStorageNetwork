@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -11,6 +12,7 @@ public static partial class BuildAssets {
  const string TerminalAsset=Root+"/RSN_RunicStorageTerminal.prefab";
  const string TerminalIcon=Root+"/RSN_TerminalIcon.png";
  [Serializable] class TerminalMaterials {public TerminalMaterial[] materials;}
+ [Serializable] class TerminalEngraving {public EngravedMesh[] items,source;public string sourceSHA256;}
  [Serializable] class TerminalMaterial {
   public string name;public string[] objects;public float[] base_color,emission_color;
   public float metallic,roughness,emission_strength;public bool backface_culling;
@@ -56,6 +58,7 @@ public static partial class BuildAssets {
    PrefabUtility.UnpackPrefabInstance(child,PrefabUnpackMode.Completely,InteractionMode.AutomatedAction);
    var renderers=go.GetComponentsInChildren<MeshRenderer>();
    Check(renderers.Length==13&&go.GetComponentsInChildren<MeshFilter>().Sum(f=>f.sharedMesh.triangles.Length/3)==3710,"Terminal v19 geometry changed");
+   ApplyTerminalEngraving(go,modelPath);
    var bounds=renderers[0].bounds;foreach(var renderer in renderers){
     Check(materials.ContainsKey(renderer.name),"Unknown terminal mesh "+renderer.name);
     renderer.sharedMaterial=materials[renderer.name];renderer.shadowCastingMode=ShadowCastingMode.On;renderer.receiveShadows=true;bounds.Encapsulate(renderer.bounds);
@@ -85,7 +88,35 @@ public static partial class BuildAssets {
    Check(mesh.vertices.SequenceEqual(source.vertices)&&mesh.normals.SequenceEqual(source.normals)&&mesh.triangles.SequenceEqual(source.triangles),"Terminal bundle geometry changed");
    Check(renderer.sharedMaterial&&renderer.sharedMaterial.shader&&!ShaderUtil.ShaderHasError(renderer.sharedMaterial.shader),"Terminal material missing");
   }
-  File.WriteAllText(Path.Combine(output,"TerminalAssetReport.json"),"{\"source\":\"v19\",\"triangles\":3710,\"renderers\":13,\"colliders\":7,\"bundleReload\":true,\"interaction\":false}");
+  int triangles=built.GetComponentsInChildren<MeshFilter>().Sum(f=>f.sharedMesh.triangles.Length/3);
+  File.WriteAllText(Path.Combine(output,"TerminalAssetReport.json"),"{\"source\":\"v19\",\"triangles\":"+triangles+",\"renderers\":13,\"colliders\":7,\"pedestalEngraved\":true,\"bundleReload\":true,\"interaction\":false}");
+ }
+ static void ApplyTerminalEngraving(GameObject go,string modelPath){
+  var data=JsonUtility.FromJson<TerminalEngraving>(File.ReadAllText(TerminalSource+"/TerminalEngraving.json"));
+  Check(data.items.Length==2&&data.source.Length==2,"Terminal engraving data missing");
+  using(var sha=SHA256.Create())Check(string.Equals(BitConverter.ToString(sha.ComputeHash(File.ReadAllBytes(modelPath))).Replace("-",""),data.sourceSHA256,StringComparison.OrdinalIgnoreCase),"Terminal engraving source is stale; regenerate from the current FBX");
+  var filters=go.GetComponentsInChildren<MeshFilter>();
+  foreach(var item in data.source){
+   Check(item.name=="RST_Stone"||item.name=="RST_BaseRune","Unexpected terminal engraving target");
+   var filter=filters.Single(f=>f.name==item.name);
+   var points=filter.sharedMesh.vertices.Select(v=>filter.transform.TransformPoint(v)).ToArray();
+   Check(item.vertices.All(p=>points.Any(q=>(p-q).sqrMagnitude<1e-10f)),"Terminal Blender/Unity coordinate mismatch: "+item.name);
+  }
+  foreach(var item in data.items){
+   Check(item.name=="RST_Stone"||item.name=="RST_BaseRune","Unexpected terminal engraving output");
+   var filter=filters.Single(f=>f.name==item.name);
+   var mesh=new Mesh{name="RSN_Terminal_"+item.name+"_Engraved"};
+   mesh.vertices=item.vertices.Select(v=>filter.transform.InverseTransformPoint(go.transform.TransformPoint(v))).ToArray();
+   mesh.normals=item.normals.Select(n=>filter.transform.InverseTransformDirection(go.transform.TransformDirection(n))).ToArray();
+   mesh.triangles=item.triangles;mesh.RecalculateBounds();
+   Directory.CreateDirectory(Root+"/Meshes");var path=Root+"/Meshes/"+mesh.name+".asset";
+   var saved=AssetDatabase.LoadAssetAtPath<Mesh>(path);
+   if(saved){
+    saved.Clear();saved.vertices=mesh.vertices;saved.normals=mesh.normals;saved.triangles=mesh.triangles;saved.RecalculateBounds();EditorUtility.SetDirty(saved);
+    UnityEngine.Object.DestroyImmediate(mesh);
+   }else{AssetDatabase.CreateAsset(mesh,path);saved=mesh;}
+   filter.sharedMesh=saved;
+  }
  }
 }
 }

@@ -27,6 +27,10 @@ public static partial class BuildAssets {
   Texture.streamingTextureForceLoadAll=true;
   if(!iconDonors) iconDonors=AssetBundle.LoadFromFile(@"E:\Steam\steamapps\common\Valheim\valheim_Data\StreamingAssets\SoftRef\Bundles\c4210710");
   Check(iconDonors,"Native icon material bundle unavailable");
+  if(model.name.StartsWith("RSN_RunicStorageTerminal",StringComparison.Ordinal)){
+   RunicStorageNetwork.TerminalMaterials.Apply(model,id=>iconDonors.LoadAsset<GameObject>("Assets/GameElements/Pieces/"+id+".prefab"));
+   return;
+  }
   bool relay=model.name.Contains("Relay");
   foreach(var renderer in model.GetComponentsInChildren<MeshRenderer>()) {
    string slot=renderer.sharedMaterial.name;
@@ -59,7 +63,8 @@ public static partial class BuildAssets {
   }
  }
  static void ReleaseIconMaterials(GameObject model) {
-  foreach(var r in model.GetComponentsInChildren<MeshRenderer>())if(r.sharedMaterial.name.StartsWith("IconOnly_"))UnityEngine.Object.DestroyImmediate(r.sharedMaterial);
+  RunicStorageNetwork.TerminalMaterials.ReleasePreview(model);
+  foreach(var r in model.GetComponentsInChildren<MeshRenderer>())if(r.sharedMaterial&&r.sharedMaterial.name.StartsWith("IconOnly_"))UnityEngine.Object.DestroyImmediate(r.sharedMaterial);
  }
  static void RenderIcon(GameObject model,Bounds b,string path,RenderingPath renderingPath=RenderingPath.Forward,int size=256,float framing=2.6f) {
   var scene=EditorSceneManager.NewPreviewScene(); var copy=UnityEngine.Object.Instantiate(model);

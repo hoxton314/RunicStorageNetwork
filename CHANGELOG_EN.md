@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Added the Storage Codex as a decorative build piece.
+
 ## 0.7.5
 
 - Updated core and relay icons with directional lighting and softer highlights to make their shapes easier to read.

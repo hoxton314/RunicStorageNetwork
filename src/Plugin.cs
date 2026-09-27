@@ -24,7 +24,7 @@ namespace RunicStorageNetwork {
   internal static ConfigEntry<string> AllowedContainers,DeniedContainers,DeniedComponents;
   internal static ConfigEntry<string> AllowedBuildTools,DeniedBuildTools,DeniedPieceComponents;
   internal static bool Healthy=true;
-  Harmony harmony; AssetBundle bundle; GameObject corePrefab,relayPrefab;
+  Harmony harmony; AssetBundle bundle; GameObject corePrefab,relayPrefab,terminalPrefab;
   internal static bool Enabled=>Healthy&&Supply.Value;
   internal new static void Info(string text)=>Log.LogInfo("[RSN] "+text);
   internal static void Debug(string text){if(DebugLogging.Value)Info(text);}
@@ -74,6 +74,7 @@ namespace RunicStorageNetwork {
     // Jotunn keeps the registered template under its inactive prefab container.
     prefab.SetActive(true);Info("Bundle loaded; RSN_NetworkCore registered with Hammer");
     RegisterRelay();
+    terminalPrefab=TerminalPiece.Register(bundle);
     PrefabManager.OnVanillaPrefabsAvailable+=CheckIds;
     harmony=new Harmony(Guid);Patches.Install(harmony);
     gameObject.AddComponent<Transport>();
@@ -108,6 +109,7 @@ namespace RunicStorageNetwork {
    foreach(string id in new[]{"Stone","FineWood","Chain","Iron","SurtlingCore","GreydwarfEye","piece_workbench","Hammer"})if(!PrefabManager.Instance.GetPrefab(id)){Disable("Missing prefab "+id);Log.LogError("[RSN] Required prefab ID unresolved: "+id);}
    try{CoreMaterials.Apply(corePrefab);}catch(Exception e){Error("Native core materials failed; bundle materials retained",e);}
    try{CoreMaterials.Apply(relayPrefab,true);}catch(Exception e){Error("Native relay materials failed; bundle materials retained",e);}
+   try{TerminalMaterials.Apply(terminalPrefab,id=>PrefabManager.Instance.GetPrefab(id));}catch(Exception e){Error("Native terminal materials failed; bundle materials retained",e);}
    // Vanilla references become available here, before a world/placement ghost is created.
    // The registered prefab keeps its identity, so previously saved cores inherit this too.
    try {
@@ -121,6 +123,8 @@ namespace RunicStorageNetwork {
     var target=corePrefab.GetComponent<WearNTear>();target.m_destroyedEffect=destroyed;target.m_hitEffect=hit;
     relayPrefab.GetComponent<Piece>().m_placeEffect=CopyEffects(piece.m_placeEffect);
     var relayWear=relayPrefab.GetComponent<WearNTear>();relayWear.m_destroyedEffect=CopyEffects(wear.m_destroyedEffect);relayWear.m_hitEffect=CopyEffects(wear.m_hitEffect);
+    terminalPrefab.GetComponent<Piece>().m_placeEffect=CopyEffects(piece.m_placeEffect);
+    var terminalWear=terminalPrefab.GetComponent<WearNTear>();terminalWear.m_destroyedEffect=CopyEffects(wear.m_destroyedEffect);terminalWear.m_hitEffect=CopyEffects(wear.m_hitEffect);
     Info("Relay effects from stone_floor: place="+EffectNames(place)+"; destroy="+EffectNames(destroyed));
     Info("Core effects from stone_floor: place="+EffectNames(place)+"; destroy="+EffectNames(destroyed)+"; hit="+EffectNames(hit));
     Info("Game color space="+QualitySettings.activeColorSpace+"; see Core material entries for native material bindings");

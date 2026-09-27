@@ -24,7 +24,16 @@
 !/tools/ValidateRelease.ps1
 !/tools/TestReleaseValidation.ps1
 !/tools/BuildIcons.cs
+!/tools/BuildTerminalAssets.cs
 !/tools/IconSilhouette.shader
+!/model-sources/
+/model-sources/*
+!/model-sources/terminal/
+/model-sources/terminal/*
+!/model-sources/terminal/RunicStorageTerminal.fbx
+!/model-sources/terminal/materials.json
+!/model-sources/terminal/source.json
+!/model-sources/terminal/README.md
 !/.github/
 /.github/*
 !/.github/ISSUE_TEMPLATE/

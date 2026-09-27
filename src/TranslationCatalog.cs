@@ -13,6 +13,8 @@ namespace RunicStorageNetwork {
    Add("name","Storage Network Core","Ядро сети хранилищ");
    Add("description","Connects nearby chests and supplies crafting, item upgrades and building with stored resources.","Объединяет ближайшие сундуки и снабжает крафт, улучшение предметов и строительство хранящимися ресурсами.");
    Add("relay_name","Runic Relay","Рунное реле");
+   Add("codex_name","Storage Codex","Кодекс запасов");
+   Add("codex_description","A runic book on a stand.","Рунная книга на подставке.");
    Add("relay_description","Automatically connects to nearby cores and relays. Extends shared storage coverage for crafting, upgrades and building.","Автоматически соединяется с соседними ядрами и реле. Расширяет общую сеть хранилищ для крафта, улучшений и строительства.");
    Add("disabled","Supply disabled","Снабжение выключено");
    Add("choose","Choose a network","Выберите сеть");

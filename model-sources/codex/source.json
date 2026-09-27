@@ -1,0 +1,20 @@
+{
+  "export": "RunicCodex/export_v04",
+  "authoringSource": "RunicCodex/model_v03/RunicCodex_Artifact_v03.blend",
+  "prefabId": "RSN_RunicCodex",
+  "assetKind": "item-visual",
+  "englishName": "Runic Codex",
+  "russianName": "Рунный кодекс",
+  "sourceTriangles": 813,
+  "preparedTriangles": 813,
+  "sourceMeshGroups": 7,
+  "preparedMeshGroups": 8,
+  "dimensionsUnity": [0.25335, 0.0985, 0.382],
+  "fbxSha256": "6807987f8463347a7152fc9a354ba3790ad2c99835ec5d09fc61cc129fb2511f",
+  "exportMaterialsSha256": "32c1ae1bc78bfbcfa4d692e8103ca9daa32edc27ac4d17064c9adfc1a039edc1",
+  "unityVersion": "6000.0.75f1",
+  "unityImportValidated": true,
+  "iconSize": 256,
+  "itemRegistered": true,
+  "gameValidated": false
+}

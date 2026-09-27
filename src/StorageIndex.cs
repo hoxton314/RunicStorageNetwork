@@ -60,6 +60,14 @@ namespace RunicStorageNetwork {
     if(entries.TryGetValue(group.Key,out var e)&&Access.Container(e.Container,player,core,out _,ownLease:true))result.AddRange(group);
    return result;
   }
+  internal static List<Stock> Browse(Core core,long player){
+   var result=new List<Stock>();if(!core)return result;
+   foreach(var c in core.Pool){
+    if(!c||!R.Valid(R.View(c))||!Access.Container(c,player,core,out _,ownLease:true))continue;
+    result.AddRange(catalog.Source(R.Key(R.View(c).GetZDO().m_uid)));
+   }
+   return result;
+  }
   internal static IEnumerable<Container> Candidates(Core core,long player,IEnumerable<Need> needs,bool discover){
    var names=new HashSet<string>(catalog.Find(needs.Select(n=>n.Item)).Select(s=>s.Source),StringComparer.Ordinal);
    foreach(var c in core.Pool){

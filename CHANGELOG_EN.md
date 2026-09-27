@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.8.1
+
+- Added the Runic Codex, crafted at a level 1 forge from silver, crystals, greydwarf eyes, linen thread and leather scraps.
+- Added the Storage Codex, a book stand built with a hammer from a Runic Codex, fine wood, stone, iron and red jute. Place it within the supply range of a core or connected relay.
+- Interact with a Storage Codex to search connected storage, choose an amount and retrieve items into your inventory.
+- The storage window shows item counts, icons and descriptions. Items of different qualities appear separately, and retrieved items keep their original properties.
+- Updated the core's network-renaming dialog to match the storage window.
+- Updated core and relay icons with directional lighting and softer highlights. The mod icon now uses the updated core icon.
+
 ## 0.6.0
 
 - Improved crafting-menu responsiveness on large storage networks by updating changed containers instead of repeatedly recounting every chest.

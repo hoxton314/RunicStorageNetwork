@@ -64,7 +64,11 @@ namespace RunicStorageNetwork {
    reason="supply unavailable";if(!Plugin.Enabled||!ZNetScene.instance||ZDOMan.instance==null)return false;
    if(!Actor(op.Actor,op.Peer,op.PlayerId,out var actor,out reason))return false;
    var point=actor.GetPosition();Piece.Requirement[] req;
-   if(op.Build){
+   if(op.Withdrawal){
+    if(!op.ReadRequirements(out reason))return false;
+    reason="terminal unavailable";if(!TerminalPoint(point,out point))return false;
+    req=null;
+   }else if(op.Build){
     var prefab=ZNetScene.instance.GetPrefab(op.Target);var piece=prefab?prefab.GetComponent<Piece>():null;
     reason="invalid build piece";if(!piece||!piece.m_enabled||op.Quality!=0||op.Multiplier!=1)return false;
     reason=BuildToolPolicy.Reason(prefab);if(reason!=null)return false;
@@ -92,10 +96,17 @@ namespace RunicStorageNetwork {
    foreach(var id in op.Nodes.Concat(new[]{op.Core}).Distinct())AddNode(Data(id));
    Graph=NetworkGraph.Automatic(nodes,Plugin.RelayLink.Value);
    if(!Connected(point)){RepairGraph();if(!Connected(point)){Plugin.Debug(op.Id+" coverage mismatch nodes="+nodes.Count+" point="+point);return false;}}
-   op.Needs=Stockroom.Requirements(req,op.Quality,op.Multiplier);reason="invalid requirements";
+   if(!op.Withdrawal)op.Needs=Stockroom.Requirements(req,op.Quality,op.Multiplier);reason="invalid requirements";
    if(op.Needs.Count==0||op.Needs.Count>32||op.Needs.Any(n=>n.Amount>100000))return false;
    foreach(var s in op.PlayerStock)if(s.Source!="player"||s.Amount<0||s.Amount>100000||!op.Needs.Any(n=>n.Item==s.Item)||s.Quality<1||s.Quality>100){reason="invalid character contribution";return false;}
    reason="ok";return true;
+  }
+  internal bool TerminalPoint(Vector3 actor,out Vector3 point){
+   point=default;var terminal=Data(op.Station);var prefab=Prefab(terminal);
+   // Verify the placed stand from synchronized records even outside the host's loaded area.
+   if(!prefab||!prefab.GetComponent<StorageCodex>()||terminal.GetLong(ZDOVars.s_creator,0)==0)return false;
+   point=terminal.GetPosition();
+   return Vector3.Distance(actor,point)<=TerminalTransfer.UseDistance&&Ward(point);
   }
   void AddNode(ZDO z){
    var prefab=Prefab(z);if(!prefab)return;bool root=prefab.GetComponent<Core>();if(!root&&!prefab.GetComponent<Relay>())return;

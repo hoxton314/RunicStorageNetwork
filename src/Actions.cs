@@ -16,7 +16,7 @@ namespace RunicStorageNetwork {
   internal static Pending Waiting,Active;
   static readonly OutcomeReceipts Outcomes=new OutcomeReceipts();
   internal static bool Locked(Inventory inv)=>Waiting!=null&&Waiting.Player&&Waiting.Player.GetInventory()==inv;
-  internal static void Clear(){Waiting=null;Active=null;Outcomes.Clear();Stockroom.ClearObservations();CraftPreparation.Clear();RecipeIndex.Invalidate();Plugin.ClearCritical();}
+  internal static void Clear(){Waiting=null;Active=null;Outcomes.Clear();TerminalTransfer.Clear();NetworkTerminal.Close();Stockroom.ClearObservations();CraftPreparation.Clear();RecipeIndex.Invalidate();Plugin.ClearCritical();}
   // The serving tray, hoe and cultivator also use TryPlacePiece/HaveRequirements.
   // BuildToolPolicy decides which tables take part; the equipped tool must own the table
   // it is placing from, so a tool cannot borrow another tool's pieces.

@@ -10,7 +10,7 @@
 
 Runic Storage Network connects your base's chests into a supply network. Craft and upgrade items at connected crafting stations, build with your construction tools, and expand your base without hauling materials from one building to another.
 
-No terminals or additional inventories: use the familiar menus while the required materials are consumed directly from connected chests.
+Craft and build through the familiar menus while materials are consumed directly from connected chests. A Storage Codex also lets you search the network and retrieve items into your inventory.
 
 ### Build pieces
 
@@ -24,7 +24,15 @@ Extends the network between buildings. Connects to the core directly or through 
 
 Relays can form chains and branches. They need an uninterrupted connection to the core to function. If the connection breaks, the disconnected section loses access to network resources, but items remain in their chests and can still be retrieved manually.
 
-Both structures are built with the regular hammer near a workbench and require no fuel.
+#### Storage Codex
+
+A book on a stone pedestal that opens network storage. Place it within the supply range of a core or connected relay. It gives access to that network without extending its coverage. Hover over it to see whether it is connected.
+
+All three structures are built with the regular hammer near a workbench and require no fuel.
+
+#### Runic Codex
+
+The closed book used to build a Storage Codex. Craft it at a level 1 forge after discovering its ingredients. It can be carried, stored, dropped and picked up like a regular item.
 
 ### Getting started
 
@@ -34,7 +42,9 @@ Both structures are built with the regular hammer near a workbench and require n
 
 Materials in your inventory are used first, followed by any missing materials from connected chests. Recipe requirements and crafting station level requirements still apply.
 
-Interact with a core to give its network an optional name using the standard Valheim text input window. Leave the field empty to remove the name. Connected cores share one network name. Hover over a connected container to see its network; unnamed networks simply show "Connected to network". Unconnected containers receive no additional line.
+Interact with a Storage Codex to open network storage. Search for an item, choose a quantity and press **Take** to retrieve it into your inventory. Items of different qualities are listed separately; retrieved items keep their original properties. Depositing items through this window is not available.
+
+Interact with a core (E with default controls) to give its network an optional name. Leave the field empty to remove the name. Connected cores share one network name. Hover over a connected container to see its network; unnamed networks simply show "Connected to network". Unconnected containers receive no additional line.
 
 ### Ranges and recipes
 
@@ -48,6 +58,10 @@ By default, chests connect within **20 m** of a node. Crafting stations and buil
 | Iron ingots | — | 2 |
 | Surtling cores | 4 | 1 |
 | Greydwarf eyes | 10 | 5 |
+
+**Runic Codex — forge level 1:** Silver ×4, Crystal ×2, Greydwarf Eye ×6, Linen Thread ×4, Leather Scraps ×4. Produces one book. The recipe uses normal ingredient discovery.
+
+**Storage Codex — hammer, near a workbench:** Runic Codex ×1, Fine Wood ×10, Stone ×8, Iron ×2, Red Jute ×2. Dismantling returns the materials, including the book.
 
 ### Installation and compatibility
 
@@ -103,7 +117,7 @@ MultiUserChest and Quick Stack Store Sort Trash Restock are optional. The curren
 
 Runic Storage Network объединяет сундуки базы в сеть снабжения. Изготавливайте и улучшайте предметы на подключённых станках, стройте строительными инструментами и расширяйте базу, не перенося материалы из одного здания в другое.
 
-Никаких терминалов или новых инвентарей: вы пользуетесь привычными меню, а необходимые ресурсы расходуются прямо из подключённых сундуков.
+Пользуйтесь привычными меню крафта и строительства — необходимые ресурсы расходуются прямо из подключённых сундуков. Кодекс запасов также позволяет искать предметы в сети и забирать их в инвентарь.
 
 ### Постройки
 
@@ -117,7 +131,15 @@ Runic Storage Network объединяет сундуки базы в сеть �
 
 Реле можно выстраивать в цепочки и ответвления. Для работы нужен непрерывный путь до ядра. При разрыве связи отключённый участок перестаёт снабжаться, но предметы остаются в сундуках и доступны вручную.
 
-Обе постройки устанавливаются обычным молотом рядом с верстаком и не требуют топлива.
+#### Кодекс запасов
+
+Книга на каменном постаменте, открывающая хранилище сети. Разместите её в зоне снабжения ядра или подключённого реле. Она даёт доступ к этой сети, не расширяя покрытие. При наведении показывается состояние подключения.
+
+Все три постройки устанавливаются обычным молотом рядом с верстаком и не требуют топлива.
+
+#### Рунный кодекс
+
+Закрытая книга для постройки Кодекса запасов. Создаётся на кузнице первого уровня после знакомства с ингредиентами. Её можно носить, хранить, выбрасывать и подбирать как обычный предмет.
 
 ### Как начать
 
@@ -127,7 +149,9 @@ Runic Storage Network объединяет сундуки базы в сеть �
 
 Сначала расходуются материалы при себе, затем — недостающее из сундуков. Требования рецептов и уровни станков сохраняются.
 
-Взаимодействуйте с ядром, чтобы задать необязательное название сети через стандартное окно ввода Valheim. Пустое поле удаляет название. Соединённые ядра используют общее название сети. При наведении на подключённое хранилище показывается его сеть; для безымянной сети — просто «Подключено к сети». У неподключённых хранилищ дополнительной строки нет.
+Взаимодействуйте с Кодексом запасов, чтобы открыть хранилище сети. Найдите предмет, выберите количество и нажмите **«Забрать»**, чтобы получить его в инвентарь. Предметы разного качества показаны отдельно и сохраняют свои свойства при получении. Складывание предметов через это окно пока недоступно.
+
+Взаимодействие с ядром (E при стандартном управлении) позволяет задать необязательное название сети. Пустое поле удаляет название. Соединённые ядра используют общее название сети. При наведении на подключённое хранилище показывается его сеть; для безымянной сети — просто «Подключено к сети». У неподключённых хранилищ дополнительной строки нет.
 
 ### Радиусы и рецепты
 
@@ -141,6 +165,10 @@ Runic Storage Network объединяет сундуки базы в сеть �
 | Железные слитки | — | 2 |
 | Ядра суртлинга | 4 | 1 |
 | Глаза грейдворфа | 10 | 5 |
+
+**Рунный кодекс — кузница первого уровня:** серебро ×4, кристалл ×2, глаз грейдворфа ×6, льняная нить ×4, обрывки кожи ×4. Получается одна книга. Рецепт открывается по обычным правилам знакомства с ингредиентами.
+
+**Кодекс запасов — молоток, рядом с верстаком:** Рунный кодекс ×1, качественная древесина ×10, камень ×8, железо ×2, красный джут ×2. При разборке материалы возвращаются, включая книгу.
 
 ### Установка и совместимость
 

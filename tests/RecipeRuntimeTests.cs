@@ -32,7 +32,8 @@ class ZNetScene {public static ZNetScene instance=new ZNetScene();public GameObj
 namespace RunicStorageNetwork {
  static class Plugin {public static readonly List<string> Messages=new List<string>();internal static void Info(string text)=>Messages.Add(text);}
  static class BuildToolPolicy {internal static bool Eligible(GameObject prefab)=>true;}
- internal sealed partial class Operation {internal string Target;internal bool Build;internal int Quality=1,Multiplier=1;internal List<Need> Needs;}
+ internal sealed partial class Operation {internal string Target;internal bool Build;internal bool Withdrawal=>false;internal int Quality=1,Multiplier=1;internal List<Need> Needs;}
+ internal static class TerminalTransfer {internal static bool Requirements(Operation op,out string why){why="not a terminal fixture";return false;}}
  internal static partial class Stockroom {}
 }
 static class RecipeRuntimeTests {

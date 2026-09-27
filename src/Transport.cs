@@ -7,6 +7,7 @@ using RunicStorageNetwork.Logic;
 namespace RunicStorageNetwork {
  internal sealed class Operation {
   internal string Id,Target,Network;internal bool Build,Quote;internal int Quality,Multiplier;
+  internal bool Withdrawal=>Target!=null&&Target.StartsWith(TerminalTransfer.Prefix,StringComparison.Ordinal);
   internal ZDOID Actor,Station,Core;internal long Peer,PlayerId;
   internal List<Need> Needs;internal List<Stock> PlayerStock=new List<Stock>();
   internal string[] Sources=Array.Empty<string>();
@@ -14,6 +15,7 @@ namespace RunicStorageNetwork {
   // Owners receive an authenticated server request. They verify the recipe and
   // their physical chest; only the server needs the complete actor/network view.
   internal bool ReadRequirements(out string reason){
+   if(Withdrawal)return TerminalTransfer.Requirements(this,out reason);
    reason="recipe unavailable";Piece.Requirement[] requirements;
    if(Build){
     var prefab=ZNetScene.instance.GetPrefab(Target);var piece=prefab?prefab.GetComponent<Piece>():null;
@@ -27,8 +29,9 @@ namespace RunicStorageNetwork {
    return Needs.Count>0&&Needs.Count<=32&&Needs.All(n=>n.Amount<=100000);
   }
   internal ZPackage Write(bool includeSources=false){var p=new ZPackage();p.Write(Id);p.Write(Target);p.Write(Build);p.Write(Quote);p.Write(Quality);p.Write(Multiplier);p.Write(Actor);p.Write(Station);p.Write(Core);p.Write(Network);p.Write(Peer);p.Write(PlayerId);p.Write(Nodes.Length);foreach(var node in Nodes)p.Write(node);Wire.Stocks(p,PlayerStock);p.Write(includeSources?Sources.Length:0);if(includeSources)foreach(string source in Sources)p.Write(source);return p;}
-  internal static Operation Read(ZPackage p){var o=new Operation{Id=p.ReadString(),Target=p.ReadString(),Build=p.ReadBool(),Quote=p.ReadBool(),Quality=p.ReadInt(),Multiplier=p.ReadInt(),Actor=p.ReadZDOID(),Station=p.ReadZDOID(),Core=p.ReadZDOID(),Network=p.ReadString(),Peer=p.ReadLong(),PlayerId=p.ReadLong()};int nodeCount=p.ReadInt();if(nodeCount<1||nodeCount>4096)throw new InvalidOperationException("Node limit");o.Nodes=new ZDOID[nodeCount];var nodeIds=new HashSet<ZDOID>();for(int i=0;i<nodeCount;i++){var node=p.ReadZDOID();if(!nodeIds.Add(node))throw new InvalidOperationException("Duplicate node");o.Nodes[i]=node;}o.PlayerStock=Wire.Stocks(p);int count=p.ReadInt();if(count<0||count>SourceSelection.MaxEntries)throw new InvalidOperationException("Source limit");o.Sources=new string[count];var unique=new HashSet<string>(StringComparer.Ordinal);for(int i=0;i<count;i++){string source=p.ReadString();if(source.Length==0||source.Length>80||source=="player"||!unique.Add(source))throw new InvalidOperationException("Invalid source selection");o.Sources[i]=source;}if((o.Quote&&o.Build)||!System.Guid.TryParseExact(o.Id,"N",out _)||o.Target.Length>160||o.Network.Length>80||o.Multiplier<1||o.Multiplier>100||o.Quality<0||o.Quality>100)throw new InvalidOperationException("Malformed operation");return o;}
+  internal static Operation Read(ZPackage p){var o=new Operation{Id=p.ReadString(),Target=p.ReadString(),Build=p.ReadBool(),Quote=p.ReadBool(),Quality=p.ReadInt(),Multiplier=p.ReadInt(),Actor=p.ReadZDOID(),Station=p.ReadZDOID(),Core=p.ReadZDOID(),Network=p.ReadString(),Peer=p.ReadLong(),PlayerId=p.ReadLong()};int nodeCount=p.ReadInt();if(nodeCount<1||nodeCount>4096)throw new InvalidOperationException("Node limit");o.Nodes=new ZDOID[nodeCount];var nodeIds=new HashSet<ZDOID>();for(int i=0;i<nodeCount;i++){var node=p.ReadZDOID();if(!nodeIds.Add(node))throw new InvalidOperationException("Duplicate node");o.Nodes[i]=node;}o.PlayerStock=Wire.Stocks(p);int count=p.ReadInt();if(count<0||count>SourceSelection.MaxEntries)throw new InvalidOperationException("Source limit");o.Sources=new string[count];var unique=new HashSet<string>(StringComparer.Ordinal);for(int i=0;i<count;i++){string source=p.ReadString();if(source.Length==0||source.Length>80||source=="player"||!unique.Add(source))throw new InvalidOperationException("Invalid source selection");o.Sources[i]=source;}if((o.Quote&&o.Build)||!System.Guid.TryParseExact(o.Id,"N",out _)||o.Target.Length>160||o.Network.Length>80||o.Multiplier<1||o.Multiplier>(o.Withdrawal?TerminalRules.MaxAmount:100)||o.Quality<0||o.Quality>100)throw new InvalidOperationException("Malformed operation");return o;}
   internal bool Validate(out Player player,out Core core,out string reason,bool forceTopology=true){
+   if(Withdrawal)return TerminalTransfer.Validate(this,out player,out core,out reason);
    reason="supply unavailable";player=null;core=null;if(!Plugin.Enabled||!ZNetScene.instance)return false;
    player=ZNetScene.instance.FindInstance(Actor)?.GetComponent<Player>();reason="actor unavailable";
    if(!player||!R.Valid(R.View(player))||R.View(player).GetZDO().GetOwner()!=Peer||player.GetPlayerID()!=PlayerId||player.IsDead())return false;
@@ -57,6 +60,7 @@ namespace RunicStorageNetwork {
    reason="ok";return true;
   }
   internal bool SelectNeeds(List<Stock> stock){
+   if(Withdrawal)return Planner.Plan(Needs,stock)!=null;
    // The exact recipe content must still match the operation before planning a debit.
    var recipe=Build?null:RecipeIndex.Find(Target);
    if(!Build&&!recipe)return false;
@@ -75,8 +79,8 @@ namespace RunicStorageNetwork {
  }
  internal sealed class Transport:MonoBehaviour {
   internal static Transport Instance;internal static int InternalMutation;
-  sealed class ServerJob {internal Operation Op;internal List<ZDO> Containers;internal Dictionary<string,ZDO> SourcesById=new Dictionary<string,ZDO>();internal Dictionary<string,long> Owners=new Dictionary<string,long>();internal Dictionary<string,List<Stock>> Snapshots=new Dictionary<string,List<Stock>>();internal readonly HashSet<string> PaidSources=new HashSet<string>();internal List<Debit> Plan;internal Dictionary<string,List<Debit>> Debits;internal Decision Decision;internal Queue<string> Outgoing=new Queue<string>();internal float Started,LastReplay,QuoteUntil;internal bool Notified,ReadyOffered,QuoteClaimed;}
-  internal sealed class Lease {internal Operation Op;internal Container Container;internal InventoryDelta Delta;internal string Key;internal List<Stock> Snapshot;internal bool Paid;}
+  sealed class ServerJob {internal readonly Dictionary<string,byte[]> Parcels=new Dictionary<string,byte[]>();internal Operation Op;internal List<ZDO> Containers;internal Dictionary<string,ZDO> SourcesById=new Dictionary<string,ZDO>();internal Dictionary<string,long> Owners=new Dictionary<string,long>();internal Dictionary<string,List<Stock>> Snapshots=new Dictionary<string,List<Stock>>();internal readonly HashSet<string> PaidSources=new HashSet<string>();internal List<Debit> Plan;internal Dictionary<string,List<Debit>> Debits;internal Decision Decision;internal Queue<string> Outgoing=new Queue<string>();internal float Started,LastReplay,QuoteUntil;internal bool Notified,ReadyOffered,QuoteClaimed;}
+  internal sealed class Lease {internal Operation Op;internal Container Container;internal InventoryDelta Delta;internal string Key;internal List<Stock> Snapshot;internal byte[] Parcel;internal bool Paid;}
   readonly Dictionary<string,ServerJob> jobs=new Dictionary<string,ServerJob>();
   internal static readonly Dictionary<Inventory,Lease> Leases=new Dictionary<Inventory,Lease>();
   readonly SourceGate sourceGate=new SourceGate();
@@ -96,7 +100,7 @@ namespace RunicStorageNetwork {
    if(world!=ZNet.instance){if(world||rpc!=null){foreach(var inventory in Leases.Keys)Integrations.Block(inventory,false);jobs.Clear();queued.Clear();releasing.Clear();terminal.Clear();awaitingRelease.Clear();sourceGate.Clear();Leases.Clear();ended.Clear();releasedLeases.Clear();Actions.Clear();}world=ZNet.instance;rpc=null;}
    if(!world||ZRoutedRpc.instance==null)return;
    if(rpc!=ZRoutedRpc.instance){rpc=ZRoutedRpc.instance;Register();}
-   Pump();Dispatch();CraftOverview.Tick();CraftInspection.Tick();CraftPreparation.Tick();
+   Pump();Dispatch();CraftOverview.Tick();CraftInspection.Tick();CraftPreparation.Tick();TerminalTransfer.Tick();
    if(Time.unscaledTime<next)return;next=Time.unscaledTime+1;
    foreach(var j in jobs.Values.ToArray()){
     if(j.Op.Quote&&j.Decision.Phase==Phase.Prepared&&j.Plan!=null&&Time.unscaledTime>=j.QuoteUntil){Abort(j,"offer expired",false);continue;}
@@ -110,7 +114,7 @@ namespace RunicStorageNetwork {
    Actions.Tick();
   }
   void Register(){
-   foreach(var pair in new Dictionary<string,Action<long,ZPackage>>{{"request",Request},{"inspect",CraftInspection.Request},{"inspected",CraftInspection.Response},{"progress",Progress},{"offer",Offer},{"claim",Claim},{"accept",Accept},{"cancelquote",CancelQuote},{"prepare",Prepare},{"prepared",Prepared},{"commit",Commit},{"paid",Paid},{"ready",Ready},{"finish",Finish},{"release",Release},{"released",Released},{"fresh",Fresh},{"refused",Refused}}){var handler=pair.Value;rpc.Register<ZPackage>("RSN_"+pair.Key,(sender,p)=>{try{handler(sender,p);}catch(Exception e){Plugin.Error("RPC "+pair.Key,e);}});}
+   foreach(var pair in new Dictionary<string,Action<long,ZPackage>>{{"request",Request},{"inspect",CraftInspection.Request},{"inspected",CraftInspection.Response},{"progress",Progress},{"offer",Offer},{"claim",Claim},{"accept",Accept},{"cancelquote",CancelQuote},{"prepare",Prepare},{"prepared",Prepared},{"commit",Commit},{"paid",Paid},{"ready",Ready},{"terminalready",TerminalTransfer.Ready},{"finish",Finish},{"release",Release},{"released",Released},{"fresh",Fresh},{"refused",Refused}}){var handler=pair.Value;rpc.Register<ZPackage>("RSN_"+pair.Key,(sender,p)=>{try{handler(sender,p);}catch(Exception e){Plugin.Error("RPC "+pair.Key,e);}});}
   }
   internal static void Send(long peer,string name,ZPackage package){if(peer==0)throw new InvalidOperationException("No coordinator");ZRoutedRpc.instance.InvokeRoutedRPC(peer,"RSN_"+name,package);}
   internal void Begin(Operation op){Send(Server,"request",op.Write(true));}
@@ -275,10 +279,11 @@ namespace RunicStorageNetwork {
      var context=new RemoteContext(lease.Op);if(!lease.Op.ReadRequirements(out string why)||!context.OwnerSource(lease.Container,out why,true))throw new InvalidOperationException(why??"ownership changed");
      foreach(var d in debits)if(d.Source!=key||d.Amount<0||!lease.Op.Needs.Any(n=>n.Item==d.Item&&n.Amount>=d.Amount))throw new InvalidOperationException("Invalid debit");
      if(lease.Delta==null)lease.Delta=new InventoryDelta(lease.Container.GetInventory(),debits,true);
+     if(lease.Op.Withdrawal&&lease.Parcel==null)lease.Parcel=TerminalTransfer.Pack(lease.Delta);
      InternalMutation++;try{lease.Delta.Apply();R.Call(lease.Container,"Save");lease.Paid=true;}finally{InternalMutation--;}
      Plugin.Debug(id+" owner debit confirmed "+key);
     }
-    answer.Write(true);
+    answer.Write(true);if(lease.Op.Withdrawal)answer.Write(lease.Parcel);
    }catch(Exception e){if(e is InvalidOperationException)Plugin.Debug(id+" owner commit postponed: "+e.Message);else Plugin.Error(id+" owner commit",e);answer.Write(false);answer.Write(e.Message);}
    Send(Server,"paid",answer);
   }
@@ -286,12 +291,21 @@ namespace RunicStorageNetwork {
    if(!ZNet.instance.IsServer())return;string id=p.ReadString(),key=p.ReadString();bool ok=p.ReadBool();
    if(!jobs.TryGetValue(id,out var j)||!j.Owners.TryGetValue(key,out long owner)||owner!=sender||j.Decision.Phase!=Phase.Committing)return;
    if(!ok){Abort(j,"commit refused: "+p.ReadString(),true);return;}
+   if(j.Op.Withdrawal){
+    var parcel=p.ReadByteArray();
+    if(parcel.Length>TerminalTransfer.MaxBytes){Abort(j,"terminal parcel too large",true);return;}
+    j.Parcels[key]=parcel;
+   }
    j.PaidSources.Add(key);j.Decision.Paid(key);if(j.Decision.Phase==Phase.Paid)NotifyPaid(j);
   }
   void NotifyPaid(ServerJob j){if(!ValidateJob(j,out string why)){Abort(j,why+" / source path changed before completion",true);return;}j.ReadyOffered=true;j.LastReplay=Time.unscaledTime;SendReady(j);}
-  void SendReady(ServerJob j){var q=Header(j.Op.Id);Wire.Debits(q,j.Plan);Send(j.Op.Peer,"ready",q);}
+  void SendReady(ServerJob j){
+   var q=Header(j.Op.Id);Wire.Debits(q,j.Plan);
+   if(j.Op.Withdrawal){q.Write(j.Parcels.Count);foreach(var parcel in j.Parcels){q.Write(parcel.Key);q.Write(parcel.Value);}Send(j.Op.Peer,"terminalready",q);}
+   else Send(j.Op.Peer,"ready",q);
+  }
   void Ready(long sender,ZPackage p){if(sender!=Server)return;string id=p.ReadString();var debits=Wire.Debits(p);Actions.Ready(id,debits);}
-  void Fresh(long sender,ZPackage p){if(sender!=Server)return;string id=p.ReadString(),key=p.ReadString();var items=Wire.Stocks(p);if(((Actions.Waiting?.Op.Id==id&&Actions.Waiting.Op.Sources.Contains(key))||CraftPreparation.Contains(id,key))&&items.All(s=>s.Source==key)){CraftInspection.Clear();Stockroom.Observe(key,items);}}
+  void Fresh(long sender,ZPackage p){if(sender!=Server)return;string id=p.ReadString(),key=p.ReadString();var items=Wire.Stocks(p);if(((Actions.Waiting?.Op.Id==id&&Actions.Waiting.Op.Sources.Contains(key))||CraftPreparation.Contains(id,key)||TerminalTransfer.Contains(id,key))&&items.All(s=>s.Source==key)){CraftInspection.Clear();Stockroom.Observe(key,items);}}
   internal void Result(string id,bool success,string reason){var p=Header(id);p.Write(success);p.Write(reason);Send(Server,"finish",p);}
   void Finish(long sender,ZPackage p){
    if(!ZNet.instance.IsServer())return;string id=p.ReadString();bool success=p.ReadBool();string reason=p.ReadString();
@@ -329,7 +343,7 @@ namespace RunicStorageNetwork {
   }
   void Reject(Operation op,string reason){ended.Add(op.Id);terminal[op.Id]=new Refusal{Op=op,Reason=reason};Plugin.Debug(op.Id+" refused: "+reason+" peer="+op.Peer+" actor="+R.Key(op.Actor)+" core="+R.Key(op.Core)+" network="+op.Network+" target="+op.Target);SendRefusal(op,reason);}
   void SendRefusal(Operation op,string reason){var q=Header(op.Id);q.Write(reason);Send(op.Peer,"refused",q);}
-  void Refused(long sender,ZPackage p){if(sender!=Server)return;string id=p.ReadString(),why=p.ReadString();CraftPreparation.Refused(id,why);Actions.Refused(id,why);}
+  void Refused(long sender,ZPackage p){if(sender!=Server)return;string id=p.ReadString(),why=p.ReadString();CraftPreparation.Refused(id,why);Actions.Refused(id,why);TerminalTransfer.Refused(id,why);}
   internal static bool Locked(Inventory inv)=>InternalMutation==0&&inv!=null&&(Leases.ContainsKey(inv)||Actions.Locked(inv)||CraftPreparation.Locked(inv));
   internal static bool LockedItem(ItemDrop.ItemData item)=>InternalMutation==0&&(Leases.Keys.Any(i=>i.ContainsItem(item))||(Actions.Waiting?.Player&&Actions.Waiting.Player.GetInventory().ContainsItem(item))||CraftPreparation.LockedItem(item));
   internal static bool Reserved(ZDO zdo,string except=null)=>zdo!=null&&((zdo.GetString("rsn_lease","")!=""&&zdo.GetString("rsn_lease","")!=except)||(Instance!=null&&ZNet.instance&&ZNet.instance.IsServer()&&Instance.sourceGate.Held(R.Key(zdo.m_uid),except)));

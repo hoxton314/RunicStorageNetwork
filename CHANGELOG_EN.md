@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Fixed the network storage window ignoring the render resolution and the **Scale GUI** setting. It was drawn at a fixed size in screen pixels, so on a 4K display it appeared half as large as the rest of the interface. It now scales like the game's own windows.
+
 ## 0.8.1
 
 - Added the Runic Codex, crafted at a level 1 forge from silver, crystals, greydwarf eyes, linen thread and leather scraps.
